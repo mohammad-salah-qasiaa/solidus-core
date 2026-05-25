@@ -1,0 +1,94 @@
+plugins {
+    id 'java'
+    id 'net.fabricmc.fabric-loom' version '1.10-SNAPSHOT'
+}
+
+// ──────────────────────────────────────────────────────────
+// Solidus - Advanced Server-Side Economy & Commerce Engine
+// Minecraft 1.21.7 | Fabric Loader 0.19.2+ | Java 25
+// ──────────────────────────────────────────────────────────
+//
+// ⚠️  IMPORTANT: INTERMEDIARY NAMES IN THE IDE
+// ──────────────────────────────────────────────────────────
+// This project builds in an UNOBFUSCATED environment without a
+// dedicated mappings block. Fabric Loom uses Yarn mappings declared
+// via the `mappings` dependency below for development-time deobfuscation.
+//
+// However, be aware that during development in your IDE:
+// - Source code uses Yarn/Mojang-mapped names (e.g., ServerPlayer,
+//   AbstractContainerMenu, getBalance, etc.)
+// - These are resolved at compile time by the Yarn mappings dependency
+// - The compiled output JAR uses Intermediary names internally
+//   (e.g., class_1703, method_12345) for runtime remapping
+//
+// If Yarn mappings are NOT available or not declared, your IDE will
+// show Intermediary names like class_3222 instead of ServerPlayer.
+// The `mappings` dependency below ensures Yarn names are available
+// during development. Do NOT remove it.
+//
+// Loom handles the remapping pipeline automatically:
+//   Development: Yarn names → compile → Intermediary → runtime remap
+//   Production:  Intermediary → remapJar → Yarn/Named output
+// ──────────────────────────────────────────────────────────
+
+java {
+    toolchain {
+        languageVersion = LanguageVersion.of(25)
+    }
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    mavenCentral()
+    maven { url = "https://maven.fabricmc.net/" }
+}
+
+dependencies {
+    // Minecraft & Mappings (Yarn for deobfuscated development)
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+
+    // Fabric Loader & API — modImplementation required for Fabric Loom remapping
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // Standard dependencies (not remapped by Loom)
+    implementation "com.google.code.gson:gson:2.12.1"
+    implementation "org.xerial:sqlite-jdbc:3.47.2.0"
+
+    // Include sqlite-jdbc in the final JAR for server-side database access
+    include "org.xerial:sqlite-jdbc:3.47.2.0"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 25
+}
+
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archives_base_name}" }
+    }
+    manifest {
+        attributes([
+            "Implementation-Title": project.archives_base_name,
+            "Implementation-Version": project.version
+        ])
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "loader_version", project.loader_version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+               "minecraft_version": project.minecraft_version,
+               "loader_version": project.loader_version
+    }
+}

@@ -1,0 +1,437 @@
+package com.solidus.shop;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.JsonOps;
+import com.solidus.SolidusMod;
+import com.solidus.economy.AntiFarmManager;
+import com.solidus.economy.BalanceManager;
+import com.solidus.economy.EconomyEngine;
+import com.solidus.util.ConfigManager;
+import com.solidus.util.CurrencyUtil;
+import com.solidus.util.TextUtil;
+
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.server.level.ServerPlayer;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Shop Manager - Core controller for the virtual server shop system.
+ *
+ * Responsibilities:
+ * - Loads and parses shop.json configuration from the config directory
+ * - Manages shop sections, pagination, and item data
+ * - Opens virtual GENERIC_9x6 chest GUI for players
+ * - Processes buy/sell transactions through the economy engine
+ *
+ * Text Component Parsing:
+ * In Minecraft 26.1.2, the official ComponentSerialization.CODEC is used
+ * to parse text components from shop.json instead of a custom GSON parser.
+ * This ensures full compatibility with Mojang's evolving Data Components
+ * and text architecture — any future changes to the Component system will
+ * be automatically supported without breaking the mod.
+ *
+ * Architecture:
+ * The shop operates entirely via server-driven packet manipulation.
+ * The client sees a standard ChestMenu, but all slot interactions
+ * are intercepted and processed server-side. Items in the shop are
+ * "Display-Only" - moving, dragging, or shifting items is blocked.
+ */
+public class ShopManager {
+
+    private final EconomyEngine economyEngine;
+    // ConcurrentHashMap for thread-safe access from server tick and reload commands
+    private final Map<String, ShopSection> sections = new ConcurrentHashMap<>();
+    private volatile boolean loaded = false;
+
+    public ShopManager(EconomyEngine economyEngine) {
+        this.economyEngine = economyEngine;
+    }
+
+    /**
+     * Loads the shop configuration from shop.json.
+     * If the file doesn't exist, copies the default from the JAR.
+     */
+    public void loadConfiguration() {
+        SolidusMod.LOGGER.info("Loading shop configuration...");
+
+        // Ensure default shop.json exists
+        ConfigManager.copyDefaultIfMissing("shop.json", "shop.json");
+
+        // Load and parse
+        String content = ConfigManager.readFile("shop.json");
+        if (content == null) {
+            SolidusMod.LOGGER.error("Failed to load shop.json! Shop will be empty.");
+            return;
+        }
+
+        try {
+            JsonObject root = JsonParser.parseString(content).getAsJsonObject();
+            JsonObject sectionsObj = root.getAsJsonObject("sections");
+
+            sections.clear();
+
+            for (Map.Entry<String, JsonElement> entry : sectionsObj.entrySet()) {
+                String sectionKey = entry.getKey();
+                JsonObject sectionObj = entry.getValue().getAsJsonObject();
+                ShopSection section = parseSection(sectionKey, sectionObj);
+                sections.put(sectionKey, section);
+            }
+
+            loaded = true;
+            SolidusMod.LOGGER.info("Shop configuration loaded: {} sections, {} total items.",
+                sections.size(), sections.values().stream().mapToInt(s -> s.items.size()).sum());
+
+        } catch (Exception e) {
+            SolidusMod.LOGGER.error("Failed to parse shop.json!", e);
+        }
+    }
+
+    /**
+     * Parses a single shop section from JSON.
+     */
+    private ShopSection parseSection(String key, JsonObject obj) {
+        // Parse display name using the official Minecraft Codec system
+        JsonObject displayNameObj = obj.getAsJsonObject("display_name");
+        Component displayName = parseTextComponent(displayNameObj);
+
+        // Parse icon material
+        String icon = obj.has("icon") ? obj.get("icon").getAsString() : "CHEST";
+
+        // Parse items
+        List<ShopItem> items = new ArrayList<>();
+        if (obj.has("items")) {
+            JsonObject itemsObj = obj.getAsJsonObject("items");
+            for (Map.Entry<String, JsonElement> itemEntry : itemsObj.entrySet()) {
+                JsonObject itemObj = itemEntry.getValue().getAsJsonObject();
+                items.add(parseShopItem(itemObj));
+            }
+        }
+
+        return new ShopSection(key, displayName, icon, items);
+    }
+
+    /**
+     * Parses a shop item from JSON.
+     */
+    private ShopItem parseShopItem(JsonObject obj) {
+        String material = obj.get("material").getAsString();
+        double buyPrice = obj.has("buy-price") ? obj.get("buy-price").getAsDouble() : -1;
+        double sellPrice = obj.has("sell-price") ? obj.get("sell-price").getAsDouble() : -1;
+
+        // Apply anti-farm deflation to sell price
+        double originalSellPrice = sellPrice;
+        if (sellPrice > 0) {
+            sellPrice = AntiFarmManager.applyDeflation(material, sellPrice);
+        }
+
+        return new ShopItem(material, buyPrice, sellPrice, originalSellPrice);
+    }
+
+    /**
+     * Parses a JSON text component object into a Minecraft Component
+     * using the official ComponentSerialization.CODEC.
+     *
+     * In Minecraft 26.1.2, the game fully relies on the Codec system
+     * for serializing and deserializing data components and text.
+     * Using the official Codec instead of a custom GSON parser ensures
+     * forward compatibility with any changes Mojang makes to the
+     * Component architecture in future versions.
+     *
+     * Supports the format: { "text": "...", "color": "...", "bold": true }
+     * This is the same format used by Minecraft's own JSON text components.
+     *
+     * @param json The JSON object representing a text component
+     * @return A properly constructed Minecraft Component
+     */
+    private Component parseTextComponent(JsonObject json) {
+        if (json == null) {
+            return Component.literal("Unknown");
+        }
+
+        try {
+            // Use the official Minecraft Codec to parse the text component.
+            // ComponentSerialization.CODEC is the authoritative parser that
+            // Minecraft uses internally for all text component operations.
+            // It handles all valid JSON text component features including:
+            // text, color, bold, italic, underlined, strikethrough, obfuscated,
+            // hoverEvent, clickEvent, extra (children), and more.
+            DataResult<Component> result = ComponentSerialization.CODEC.parse(
+                JsonOps.INSTANCE, json);
+
+            return result.resultOrPartial(error -> {
+                SolidusMod.LOGGER.warn("Failed to parse text component from shop.json: {}", error);
+            }).orElse(Component.literal("Unknown"));
+        } catch (Exception e) {
+            SolidusMod.LOGGER.warn("Exception parsing text component from shop.json: {}", e.getMessage());
+            return Component.literal("Unknown");
+        }
+    }
+
+    /**
+     * Opens the virtual shop GUI for a player.
+     * Creates and registers a ShopScreenHandler that manages the entire
+     * interaction lifecycle through server-side packet manipulation.
+     */
+    public void openShop(ServerPlayer player) {
+        if (!loaded) {
+            player.sendSystemMessage(TextUtil.error("Shop is not loaded yet. Please contact an admin."));
+            return;
+        }
+
+        // Open the shop starting at the main menu (section selection)
+        ShopGUI.openMainMenu(player, this);
+    }
+
+    /**
+     * Opens a specific section of the shop for a player.
+     */
+    public void openSection(ServerPlayer player, String sectionKey, int page) {
+        ShopSection section = sections.get(sectionKey);
+        if (section == null) {
+            player.sendSystemMessage(TextUtil.error("Shop section not found."));
+            return;
+        }
+        ShopGUI.openSection(player, this, section, page);
+    }
+
+    /**
+     * Processes a buy transaction for a shop item.
+     *
+     * Transaction Flow:
+     * 1. Validate the item exists and has a valid buy price
+     * 2. Check if the player has sufficient balance
+     * 3. Atomically deduct the price from the player's balance
+     * 4. Spawn the purchased item stack into the player's inventory
+     *
+     * @param player     The buying player
+     * @param material   The Minecraft material name
+     * @param quantity   The number of items to buy
+     * @return true if the transaction succeeded
+     */
+    public boolean processBuy(ServerPlayer player, String material, int quantity) {
+        // Find the item in any section
+        ShopItem item = findItem(material);
+        if (item == null || item.buyPrice() <= 0) {
+            player.sendSystemMessage(TextUtil.error("This item cannot be purchased."));
+            return false;
+        }
+
+        double totalCost = CurrencyUtil.round(item.buyPrice() * quantity);
+
+        // Check balance (reads from in-memory cache — instant)
+        BalanceManager balanceManager = economyEngine.getBalanceManager();
+        double balance = balanceManager.getBalance(player).join();
+
+        if (balance < totalCost) {
+            player.sendSystemMessage(
+                TextUtil.error("Insufficient funds! You need " + CurrencyUtil.format(totalCost)
+                    + " but only have " + CurrencyUtil.format(balance)));
+            return false;
+        }
+
+        // Deduct balance
+        double newBalance = balanceManager.subtractBalance(player, totalCost).join();
+        if (newBalance < 0) {
+            player.sendSystemMessage(TextUtil.error("Transaction failed. Please try again."));
+            return false;
+        }
+
+        // Spawn item into player's inventory
+        net.minecraft.world.item.ItemStack itemStack = createItemStack(material, quantity);
+        if (!player.getInventory().add(itemStack)) {
+            // Inventory full - drop at player's feet
+            player.drop(itemStack, false);
+            player.sendSystemMessage(TextUtil.warning("Inventory full! Item dropped at your feet."));
+        }
+
+        // Success notification
+        player.sendSystemMessage(
+            TextUtil.success("Purchased " + quantity + "x " + material + " for ")
+                .append(TextUtil.currency(CurrencyUtil.format(totalCost)))
+                .append(TextUtil.styled(" | New balance: ", ChatFormatting.GRAY))
+                .append(TextUtil.currency(CurrencyUtil.format(newBalance)))
+        );
+
+        return true;
+    }
+
+    /**
+     * Processes a sell transaction for a shop item.
+     *
+     * Transaction Flow:
+     * 1. Validate the item exists and has a valid sell price
+     * 2. Apply anti-farm deflation to the sell price
+     * 3. Verify the player has the item in their inventory
+     * 4. Remove the item from the player's inventory
+     * 5. Atomically add the sell price to the player's balance
+     *
+     * @param player     The selling player
+     * @param material   The Minecraft material name
+     * @param quantity   The number of items to sell
+     * @return true if the transaction succeeded
+     */
+    public boolean processSell(ServerPlayer player, String material, int quantity) {
+        ShopItem item = findItem(material);
+        if (item == null || item.sellPrice() <= 0) {
+            player.sendSystemMessage(TextUtil.error("This item cannot be sold."));
+            return false;
+        }
+
+        // Check if player has the item
+        if (!hasItemInInventory(player, material, quantity)) {
+            player.sendSystemMessage(TextUtil.error("You don't have " + quantity + "x " + material + " in your inventory."));
+            return false;
+        }
+
+        // Remove items from inventory
+        removeItemFromInventory(player, material, quantity);
+
+        // Calculate sell price (already deflated by AntiFarmManager during loading)
+        double totalValue = CurrencyUtil.round(item.sellPrice() * quantity);
+
+        // Add balance
+        BalanceManager balanceManager = economyEngine.getBalanceManager();
+        double newBalance = balanceManager.addBalance(player, totalValue).join();
+
+        if (newBalance < 0) {
+            // CRITICAL: Balance add failed after item removal - attempt refund
+            SolidusMod.LOGGER.error("CRITICAL: Sell balance add failed for {}! Item lost: {}x{}",
+                player.getName().getString(), quantity, material);
+            player.sendSystemMessage(TextUtil.error("Transaction error. Please contact an admin."));
+            return false;
+        }
+
+        // Success notification with deflation warning if applicable
+        Component message = TextUtil.success("Sold " + quantity + "x " + material + " for ")
+            .append(TextUtil.currency(CurrencyUtil.format(totalValue)));
+
+        if (AntiFarmManager.isDeflated(material)) {
+            String reason = AntiFarmManager.getDeflationReason(material);
+            message = message.append(TextUtil.styled(
+                " [" + reason + " - Deflated]", ChatFormatting.DARK_RED));
+        }
+
+        player.sendSystemMessage(message.append(
+            TextUtil.styled(" | New balance: ", ChatFormatting.GRAY))
+            .append(TextUtil.currency(CurrencyUtil.format(newBalance)))
+        );
+
+        return true;
+    }
+
+    // ── Helpers ───────────────────────────────────────────
+
+    private ShopItem findItem(String material) {
+        for (ShopSection section : sections.values()) {
+            for (ShopItem item : section.items) {
+                if (item.material().equalsIgnoreCase(material)) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
+    private net.minecraft.world.item.ItemStack createItemStack(String material, int quantity) {
+        try {
+            net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM
+                .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(material.toLowerCase()));
+            if (item == null) {
+                SolidusMod.LOGGER.error("Unknown material: {}", material);
+                return net.minecraft.world.item.ItemStack.EMPTY;
+            }
+            return new net.minecraft.world.item.ItemStack(item, quantity);
+        } catch (Exception e) {
+            SolidusMod.LOGGER.error("Failed to create ItemStack for material: {}", material, e);
+            return net.minecraft.world.item.ItemStack.EMPTY;
+        }
+    }
+
+    /**
+     * Extracts the registry path name from an ItemStack for reliable
+     * material matching. This avoids issues with getItem().toString()
+     * which may include namespace prefixes or vary by mapping.
+     */
+    private String getMaterialName(net.minecraft.world.item.ItemStack stack) {
+        try {
+            return net.minecraft.core.registries.BuiltInRegistries.ITEM
+                .getKey(stack.getItem()).getPath().toUpperCase();
+        } catch (Exception e) {
+            return stack.getItem().toString().toUpperCase();
+        }
+    }
+
+    private boolean hasItemInInventory(ServerPlayer player, String material, int quantity) {
+        int count = 0;
+        for (net.minecraft.world.item.ItemStack stack : player.getInventory().items) {
+            if (!stack.isEmpty() && getMaterialName(stack).equalsIgnoreCase(material)) {
+                count += stack.getCount();
+            }
+        }
+        return count >= quantity;
+    }
+
+    private void removeItemFromInventory(ServerPlayer player, String material, int quantity) {
+        int remaining = quantity;
+        for (int i = 0; i < player.getInventory().items.size() && remaining > 0; i++) {
+            net.minecraft.world.item.ItemStack stack = player.getInventory().items.get(i);
+            if (!stack.isEmpty() && getMaterialName(stack).equalsIgnoreCase(material)) {
+                int toRemove = Math.min(stack.getCount(), remaining);
+                stack.shrink(toRemove);
+                remaining -= toRemove;
+            }
+        }
+    }
+
+    // ── Getters ───────────────────────────────────────────
+
+    public Map<String, ShopSection> getSections() {
+        return Collections.unmodifiableMap(sections);
+    }
+
+    public EconomyEngine getEconomyEngine() {
+        return economyEngine;
+    }
+
+    public boolean isLoaded() {
+        return loaded;
+    }
+
+    // ── Data Classes ──────────────────────────────────────
+
+    /**
+     * Represents a shop section (category of items).
+     */
+    public record ShopSection(
+        String key,
+        Component displayName,
+        String icon,
+        List<ShopItem> items
+    ) {}
+
+    /**
+     * Represents a single shop item with pricing.
+     *
+     * @param material         The Minecraft Material name (e.g., "DIAMOND")
+     * @param buyPrice         Price to buy 1 unit (-1 = not purchasable)
+     * @param sellPrice        Price received for selling 1 unit (after deflation)
+     * @param originalSellPrice Price before anti-farm deflation was applied
+     */
+    public record ShopItem(
+        String material,
+        double buyPrice,
+        double sellPrice,
+        double originalSellPrice
+    ) {}
+}

@@ -1,0 +1,105 @@
+package com.solidus;
+
+import com.solidus.commands.BalanceCommand;
+import com.solidus.commands.BaltopCommand;
+import com.solidus.commands.PayCommand;
+import com.solidus.commands.ShopCommand;
+import com.solidus.commands.AuctionCommand;
+import com.solidus.economy.EconomyEngine;
+import com.solidus.shop.ShopManager;
+import com.solidus.auction.AuctionManager;
+import com.solidus.networking.PacketHandler;
+import com.solidus.networking.RateLimiter;
+
+import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Solidus - Advanced Server-Side Economy & Commerce Engine
+ * Copyright (c) 2025 MOHD_Gs. All rights reserved.
+ *
+ * Main entry point for the dedicated server mod.
+ *
+ * Architecture: 100% Server-Side Only
+ * - No custom textures, no custom models, no client-side dependencies
+ * - Players connect using completely un-modded Vanilla Minecraft Client
+ * - All UI operates via packet manipulation (Virtual Chest GUI)
+ */
+public class SolidusMod implements DedicatedServerModInitializer {
+
+    public static final String MOD_ID = "solidus";
+    public static final String MOD_NAME = "Solidus";
+    public static final Logger LOGGER = LoggerFactory.getLogger(MOD_NAME);
+
+    private static EconomyEngine economyEngine;
+    private static ShopManager shopManager;
+    private static AuctionManager auctionManager;
+    private static PacketHandler packetHandler;
+    private static RateLimiter rateLimiter;
+
+    @Override
+    public void onInitializeServer() {
+        LOGGER.info("Solidus Economy & Commerce Engine is initializing...");
+
+        // Initialize core subsystems in dependency order
+        rateLimiter = new RateLimiter();
+
+        economyEngine = new EconomyEngine();
+        economyEngine.initialize();
+
+        shopManager = new ShopManager(economyEngine);
+        shopManager.loadConfiguration();
+
+        auctionManager = new AuctionManager(economyEngine);
+        auctionManager.initialize();
+
+        packetHandler = new PacketHandler(shopManager, auctionManager, rateLimiter);
+        packetHandler.register();
+
+        // Register all server-side commands
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            BalanceCommand.register(dispatcher, economyEngine);
+            PayCommand.register(dispatcher, economyEngine);
+            BaltopCommand.register(dispatcher, economyEngine);
+            ShopCommand.register(dispatcher, shopManager);
+            AuctionCommand.register(dispatcher, auctionManager);
+        });
+
+        // Register server shutdown hook for clean database closure
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            LOGGER.info("Solidus is shutting down...");
+            auctionManager.shutdown();
+            economyEngine.shutdown();
+            rateLimiter.clear();
+            LOGGER.info("Solidus shutdown complete. All data saved.");
+        });
+
+        LOGGER.info("Solidus initialized successfully. Economy engine online.");
+    }
+
+    // ── Static Accessors ──────────────────────────────────
+
+    public static EconomyEngine getEconomyEngine() {
+        return economyEngine;
+    }
+
+    public static ShopManager getShopManager() {
+        return shopManager;
+    }
+
+    public static AuctionManager getAuctionManager() {
+        return auctionManager;
+    }
+
+    public static PacketHandler getPacketHandler() {
+        return packetHandler;
+    }
+
+    public static RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
+}

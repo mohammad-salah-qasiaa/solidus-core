@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "solidus",
+  "version": "${version}",
+  "name": "Solidus",
+  "description": "Advanced Server-Side Economy & Commerce Engine for Minecraft",
+  "authors": ["MOHD_Gs"],
+  "contact": {},
+  "license": "All Rights Reserved",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "com.solidus.SolidusMod"
+    ]
+  },
+  "mixins": [
+    "solidus.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.2",
+    "minecraft": "~1.21.7",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
