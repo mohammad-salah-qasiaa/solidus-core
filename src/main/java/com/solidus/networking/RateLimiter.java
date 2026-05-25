@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimiter {
 
     /** Minimum interval between allowed clicks in milliseconds */
-    private static final long MIN_CLICK_INTERVAL_MS = 150;
+    public static final long MIN_CLICK_INTERVAL_MS = 150;
 
     /** How often to run cleanup of stale entries */
     private static final long CLEANUP_INTERVAL_MS = 60_000;

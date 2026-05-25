@@ -5,6 +5,7 @@ import com.solidus.commands.BaltopCommand;
 import com.solidus.commands.PayCommand;
 import com.solidus.commands.ShopCommand;
 import com.solidus.commands.AuctionCommand;
+import com.solidus.economy.BalanceManager;
 import com.solidus.economy.EconomyEngine;
 import com.solidus.shop.ShopManager;
 import com.solidus.auction.AuctionManager;
@@ -61,10 +62,11 @@ public class SolidusMod implements DedicatedServerModInitializer {
         packetHandler.register();
 
         // Register all server-side commands
+        BalanceManager balanceManager = economyEngine.getBalanceManager();
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            BalanceCommand.register(dispatcher, economyEngine);
-            PayCommand.register(dispatcher, economyEngine);
-            BaltopCommand.register(dispatcher, economyEngine);
+            BalanceCommand.register(dispatcher, balanceManager);
+            PayCommand.register(dispatcher, balanceManager);
+            BaltopCommand.register(dispatcher, balanceManager);
             ShopCommand.register(dispatcher, shopManager);
             AuctionCommand.register(dispatcher, auctionManager);
         });

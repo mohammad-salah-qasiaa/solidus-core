@@ -72,6 +72,13 @@ public class SQLiteStorage {
      */
     private final ConcurrentHashMap<UUID, Double> balanceCache = new ConcurrentHashMap<>();
 
+    /**
+     * In-memory player name cache. Maps UUID to the last known player name.
+     * Used by getTopBalances() to display names without querying the database.
+     * Populated during initial cache load and updated on every balance operation.
+     */
+    private final ConcurrentHashMap<UUID, String> playerNameCache = new ConcurrentHashMap<>();
+
     private final ExecutorService asyncExecutor;
     private final String databaseUrl;
     private volatile boolean initialized = false;
@@ -127,17 +134,23 @@ public class SQLiteStorage {
     }
 
     /**
-     * Pre-loads all existing balances from the database into the in-memory cache.
-     * This ensures that getBalance() calls never need to query the database.
+     * Pre-loads all existing balances and player names from the database
+     * into the in-memory cache. This ensures that getBalance() calls
+     * never need to query the database, and getTopBalances() can display
+     * player names without additional lookups.
      */
     private void loadAllBalancesIntoCache(Connection conn) throws SQLException {
-        String sql = "SELECT uuid, balance FROM player_balances";
+        String sql = "SELECT uuid, player_name, balance FROM player_balances";
         try (Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 UUID uuid = UUID.fromString(rs.getString("uuid"));
+                String name = rs.getString("player_name");
                 double balance = rs.getDouble("balance");
                 balanceCache.put(uuid, balance);
+                if (name != null && !name.isEmpty()) {
+                    playerNameCache.put(uuid, name);
+                }
             }
         }
     }
@@ -176,6 +189,11 @@ public class SQLiteStorage {
     public CompletableFuture<Double> getBalance(UUID uuid, String playerName) {
         ensureInitialized();
 
+        // Update player name cache whenever we see a non-empty name
+        if (playerName != null && !playerName.isEmpty()) {
+            playerNameCache.put(uuid, playerName);
+        }
+
         // Check the in-memory cache first (instant, no DB query)
         Double balance = balanceCache.get(uuid);
         if (balance != null) {
@@ -195,6 +213,7 @@ public class SQLiteStorage {
     /**
      * Retrieves the top N players by balance for leaderboard display.
      * Reads from the in-memory cache and sorts on the calling thread.
+     * Player names are resolved from the in-memory playerNameCache.
      *
      * @param limit Maximum number of entries to return
      * @return CompletableFuture containing list of BalanceEntry objects
@@ -206,11 +225,14 @@ public class SQLiteStorage {
                 .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                 .limit(limit)
                 .collect(ArrayList<BalanceEntry>::new,
-                    (list, entry) -> list.add(new BalanceEntry(
-                        list.size() + 1,
-                        "", // Player names resolved on demand
-                        entry.getValue()
-                    )),
+                    (list, entry) -> {
+                        String name = playerNameCache.getOrDefault(entry.getKey(), "Unknown");
+                        list.add(new BalanceEntry(
+                            list.size() + 1,
+                            name,
+                            entry.getValue()
+                        ));
+                    },
                     ArrayList::addAll);
         }, asyncExecutor);
     }
@@ -240,14 +262,22 @@ public class SQLiteStorage {
 
         // Submit to the single-threaded executor queue for sequential processing
         return CompletableFuture.supplyAsync(() -> {
+            // Save the previous value for rollback in case persist fails
+            Double previousBalance = balanceCache.get(uuid);
+
             // Update in-memory cache
             balanceCache.put(uuid, amount);
 
             // Persist to SQLite
             boolean success = persistBalance(uuid, playerName, amount);
             if (!success) {
-                // Rollback cache if persist failed
-                SolidusMod.LOGGER.error("Failed to persist balance for UUID: {}. Cache rollback.", uuid);
+                // Rollback cache to previous value on persist failure
+                if (previousBalance != null) {
+                    balanceCache.put(uuid, previousBalance);
+                } else {
+                    balanceCache.remove(uuid);
+                }
+                SolidusMod.LOGGER.error("Failed to persist balance for UUID: {}. Cache rolled back to previous value.", uuid);
             }
             return success;
         }, asyncExecutor);
@@ -365,8 +395,14 @@ public class SQLiteStorage {
     /**
      * Persists a balance update to SQLite.
      * Called from the single-threaded executor — no locking needed.
+     * Also updates the playerNameCache to keep names current.
      */
     private boolean persistBalance(UUID uuid, String playerName, double balance) {
+        // Update player name cache whenever we see a non-empty name
+        if (playerName != null && !playerName.isEmpty()) {
+            playerNameCache.put(uuid, playerName);
+        }
+
         String upsertSql = """
             INSERT INTO player_balances (uuid, player_name, balance, last_updated)
             VALUES (?, ?, ?, ?)

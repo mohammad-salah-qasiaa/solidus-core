@@ -119,13 +119,14 @@ Suggested media:
 
 ## Installation
 
-> Requirements: Minecraft 26.1.x · Java 25 · Fabric Loader
+> Requirements: Minecraft 26.1.x · Java 25 · Fabric Loader · Fabric API
 
-1. Install Fabric Loader
-2. Download the latest Solidus release
-3. Place the `.jar` into `mods/`
-4. Start the server
-5. Configure `config/solidus/shop.json`
+1. Install [Fabric Loader](https://fabricmc.net/use/)
+2. Install [Fabric API](https://modrinth.com/mod/fabric-api) on the server
+3. Download the latest Solidus release
+4. Place both `.jar` files into `mods/`
+5. Start the server
+6. Configure `config/solidus/shop.json`
 
 No client installation required.
 
@@ -175,14 +176,15 @@ Supports:
 
 ## Compatibility
 
-| Component | Requirement |
-| --------- | ----------- |
-| Minecraft | 26.1.x      |
-| Loader    | Fabric      |
-| Java      | 25          |
-| Client    | Any         |
-| Database  | SQLite      |
-| Side      | Server      |
+| Component | Requirement    |
+| --------- | -------------- |
+| Minecraft | 26.1.x         |
+| Loader    | Fabric         |
+| Fabric API | Required      |
+| Java      | 25             |
+| Client    | Any            |
+| Database  | SQLite         |
+| Side      | Server         |
 
 ---
 

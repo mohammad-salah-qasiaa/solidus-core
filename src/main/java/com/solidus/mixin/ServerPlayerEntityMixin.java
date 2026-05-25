@@ -59,6 +59,13 @@ public abstract class ServerPlayerEntityMixin {
      * to force the client to resync with the server's container state.
      * Without this, ghost items appear due to the client-server state
      * mismatch caused by network latency.
+     *
+     * Accessor Compatibility Note:
+     * ServerboundContainerClickPacket uses record-style accessors in
+     * Minecraft 1.21.2+ (slotNum(), buttonNum(), clickType() — no get prefix).
+     * If Yarn mappings change in future versions, these may need to be updated
+     * to getSlotNum(), getButtonNum(), getClickType(). Always verify after
+     * updating Minecraft or Fabric versions.
      */
     @Inject(method = "handleContainerClick", at = @At("HEAD"), cancellable = true)
     private void onContainerClick(
@@ -70,13 +77,13 @@ public abstract class ServerPlayerEntityMixin {
 
         // Extract click data from the packet
         // In Minecraft 1.21.2+, ServerboundContainerClickPacket uses record-style accessors
+        // (no "get" prefix). If using different mappings, these may be:
+        //   getSlotNum() / slotNum()
+        //   getButtonNum() / buttonNum()
+        //   getClickType() / clickType()
         int slotIndex = packet.getSlotNum();
         int button = packet.getButtonNum();
         ClickType clickType = packet.getClickType();
-
-        // Note: If using Yarn mappings for 1.21.7, the accessor method names may differ.
-        // Common variants: getSlotNum() / slotNum(), getButtonNum() / buttonNum(),
-        // getClickType() / clickType(). The record-style (no get prefix) is the modern standard.
 
         // Check if this is a Solidus GUI click
         boolean handled = packetHandler.handleContainerClick(
