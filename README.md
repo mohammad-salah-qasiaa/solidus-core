@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-SCCL_v1.0-red.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-1.0.0--beta-orange.svg)](https://github.com/mohammad-salah-qasiaa/solidus)
 [![Java](https://img.shields.io/badge/Java-25-purple.svg)](https://adoptium.net/)
-[![Side](https://img.shields.io/badge/Server_Side-100%25-brightgreen.svg)]()
+[![Side](https://img.shields.io/badge/Server-Side-brightgreen.svg)]()
 
 **Server-side economy, shop, and auction system for Minecraft Fabric — designed for vanilla compatibility and stable long-term economies.**
 
@@ -18,8 +18,8 @@
 ## Why Solidus?
 
 - **Fully server-side** — Zero client installation, zero resource packs, zero custom textures
-- **No client mods** — Players connect with a completely unmodified Vanilla Minecraft Client
-- **Dynamic economy** — In-memory cache with async SQLite persistence, instant O(1) reads
+- **No client installation required** — Works with any Minecraft client, modded or vanilla
+- **Dynamic economy** — In-memory cache with async SQLite persistence, memory-backed balance reads
 - **Auction House** — Player-driven marketplace with race-condition protection
 - **Anti-farm balancing** — Hardcoded deflation table neutralizes Iron Farms, Raid Farms, Piglin Bartering, and Trial Chamber exploits
 - **Vanilla compatible** — Native ScreenHandler GUIs (GENERIC_9x6), no third-party GUI libraries
@@ -36,7 +36,7 @@
 
 ### Economy
 
-In-memory balance cache backed by asynchronous SQLite with WAL mode — reads are instant O(1) with no database hits. Single-Threaded Executor Queue serializes all mutations, eliminating race conditions without database-level locks. Players start with 500 S$ (configurable). Peer-to-peer transfers via `/pay` with anti-exploit validation. Server-wide leaderboards via `/baltop`.
+In-memory balance cache backed by asynchronous SQLite with WAL mode — memory-backed balance reads with no database hits. Single-Threaded Executor Queue serializes all mutations, avoiding race conditions through serialized execution without database-level locks. Players start with 500 S$ (configurable). Peer-to-peer transfers via `/pay` with anti-exploit validation. Server-wide leaderboards via `/baltop`.
 
 ### Shop
 
@@ -61,6 +61,15 @@ Hardcoded anti-farm deflation table prevents configuration tampering and economy
 | Trial Keys | 70% | Trial Chamber Farms |
 | Iron | 30% | Iron Farms |
 | + 8 more materials | 20-60% | Various farm exploits |
+
+---
+
+## Download
+
+| Platform | Link |
+|----------|------|
+| GitHub Releases | [Latest Release](https://github.com/mohammad-salah-qasiaa/solidus/releases) |
+| Modrinth | *Coming soon* |
 
 ---
 
@@ -129,7 +138,7 @@ Text components use Minecraft's official `ComponentSerialization.CODEC` format �
 | **Minecraft** | Java Edition 26.1.x |
 | **Mod Loader** | Fabric Loader >= 0.19.2 |
 | **Java** | 25 |
-| **Side** | Server-Side Only (100%) |
+| **Side** | Server-Side Only |
 | **Client** | Vanilla Minecraft (un-modded) |
 | **Database** | SQLite (WAL mode, async) |
 | **GUI** | Native ScreenHandler (no third-party libs) |
@@ -139,10 +148,10 @@ Text components use Minecraft's official `ComponentSerialization.CODEC` format �
 ## FAQ
 
 **Does this require client mods?**
-No. Solidus is 100% server-side. Players connect with an unmodified Vanilla Minecraft Client.
+No. Solidus is fully server-side. No client installation required — works with any Minecraft client, modded or vanilla.
 
 **Works with Velocity / BungeeCord?**
-Yes, Solidus runs on the backend server. For proxy networks with monetization, a Commercial License is required — see [LICENSE](LICENSE).
+Yes, Solidus runs on the backend server. For proxy networks (BungeeCord, Velocity, Waterfall, or equivalent) with monetization, a Commercial License is required — see [LICENSE](LICENSE).
 
 **Supports offline mode?**
 Solidus uses UUID-based identification. In offline/cracked mode, UUIDs are generated from usernames — this works but is less secure against identity spoofing.
@@ -220,53 +229,7 @@ Without a mappings block, code in the IDE uses Intermediary names (e.g., `class_
 4. **ALWAYS call `sendContentUpdates()`** after canceling packets in Mixins.
 5. **Use `ComponentSerialization.CODEC`** for text component parsing from JSON.
 
-### Project Structure
-
-```
-solidus/
-├── build.gradle
-├── settings.gradle
-├── gradle.properties
-├── src/main/java/com/solidus/
-│   ├── SolidusMod.java                  # Main entry point
-│   ├── economy/
-│   │   ├── EconomyEngine.java           # Central coordinator (executor queue)
-│   │   ├── SQLiteStorage.java           # Async SQLite + in-memory cache
-│   │   ├── AntiFarmManager.java         # Deflation table (hardcoded)
-│   │   └── BalanceManager.java          # High-level balance API
-│   ├── commands/
-│   │   ├── BalanceCommand.java          # /balance, /bal
-│   │   ├── PayCommand.java              # /pay
-│   │   ├── BaltopCommand.java           # /baltop
-│   │   ├── ShopCommand.java             # /shop
-│   │   └── AuctionCommand.java          # /ah, /ah sell
-│   ├── shop/
-│   │   ├── ShopManager.java             # Shop config loader & Codec parser
-│   │   ├── ShopGUI.java                 # GUI layout builder
-│   │   ├── ShopScreenHandler.java       # Native ScreenHandler
-│   │   └── ShopDummyContainer.java      # Display-only container
-│   ├── auction/
-│   │   ├── AuctionManager.java          # Auction engine (executor queue)
-│   │   ├── AuctionGUI.java              # Auction GUI builder
-│   │   ├── AuctionScreenHandler.java    # Native ScreenHandler
-│   │   ├── AuctionEntry.java            # Listing data model
-│   │   └── AuctionDummyContainer.java   # Display-only container
-│   ├── networking/
-│   │   ├── PacketHandler.java           # Packet interception
-│   │   └── RateLimiter.java             # Click cooldown manager
-│   ├── mixin/
-│   │   ├── ServerPlayerEntityMixin.java # Container click + ghost item fix
-│   │   └── ScreenHandlerMixin.java      # Quick-move blocker + resync
-│   └── util/
-│       ├── TextUtil.java                # Component factory (NO legacy chars)
-│       ├── CurrencyUtil.java            # Currency formatting & limits
-│       └── ConfigManager.java           # File I/O manager
-├── src/main/resources/
-│   ├── fabric.mod.json
-│   ├── solidus.mixins.json
-│   ├── shop.json                        # 120+ items, 11 sections
-│   └── pack.mcmeta
-```
+For full project structure and detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 </details>
 
@@ -298,6 +261,8 @@ build/libs/solidus-1.0.0-beta.jar
 - [ ] **Multi-Currency** — Support for multiple independent currency types
 - [ ] **REST API** — HTTP endpoint for external integrations (web dashboards, Discord bots)
 - [ ] **Redis Backend** — Optional Redis backend for multi-server economy sync
+- [ ] **Metrics & Economy Analytics** — Inflation tracking, transaction logs, and server health dashboards
+- [ ] **Backup & Recovery** — Automated economy snapshots with point-in-time restore
 
 ---
 
@@ -313,8 +278,8 @@ This project is licensed under the **Solidus Community & Commercial License (SCC
 | Study & modify source code | Free |
 | Fork & redistribute (open-source, same license) | Free |
 | Commercial servers (paid ranks, webshops, etc.) | Requires Commercial License |
-| Servers with 30+ concurrent / 100+ unique players/month | Requires Commercial License |
-| Proxy networks (BungeeCord, Velocity) with monetization | Requires Commercial License |
+| Large-scale public servers | Requires Commercial License |
+| Proxy networks with monetization | Requires Commercial License |
 | Selling or relicensing as a paid product | Prohibited |
 
 See [LICENSE](LICENSE) for full terms.
