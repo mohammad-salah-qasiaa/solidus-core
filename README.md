@@ -1,68 +1,78 @@
+<div align="center">
+
 # Solidus
 
-**Advanced Server-Side Economy & Commerce Engine for Minecraft**
+[![Platform](https://img.shields.io/badge/Platform-Fabric-blue.svg)](https://fabricmc.net/)
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.1.x-green.svg)](https://www.minecraft.net/)
+[![License](https://img.shields.io/badge/License-SCCL_v1.0-red.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-1.0.0--beta-orange.svg)](https://github.com/mohammad-salah-qasiaa/solidus)
+[![Java](https://img.shields.io/badge/Java-25-purple.svg)](https://adoptium.net/)
+[![Side](https://img.shields.io/badge/Server_Side-100%25-brightgreen.svg)]()
 
-<p align="center">
-  <strong>Solidus</strong> — محرك اقتصاد وتجارة متقدم بالكامل من جانب الخادم لماينكرافت
-</p>
+**Server-side economy, shop, and auction system for Minecraft Fabric — designed for vanilla compatibility and stable long-term economies.**
+
+</div>
 
 ---
 
-## Overview
+## Why Solidus?
 
-Solidus is a 100% server-side economy and commerce engine for Minecraft Java Edition, built on the Fabric mod loader. It provides a complete virtual currency system, a GUI-based server shop with anti-farm price deflation, and a player-driven auction house with race-condition protection. Fully vanilla-client compatible — no custom textures, no client mods, and no resource packs required. Players connect and interact using a completely unmodified Vanilla Minecraft Client.
+- **Fully server-side** — Zero client installation, zero resource packs, zero custom textures
+- **No client mods** — Players connect with a completely unmodified Vanilla Minecraft Client
+- **Dynamic economy** — In-memory cache with async SQLite persistence, instant O(1) reads
+- **Auction House** — Player-driven marketplace with race-condition protection
+- **Anti-farm balancing** — Hardcoded deflation table neutralizes Iron Farms, Raid Farms, Piglin Bartering, and Trial Chamber exploits
+- **Vanilla compatible** — Native ScreenHandler GUIs (GENERIC_9x6), no third-party GUI libraries
+
+<!-- Add screenshot or GIF here -->
+<!--
+![Solidus Shop GUI](assets/shop-preview.gif)
+![Solidus Auction House](assets/auction-preview.gif)
+-->
 
 ---
 
 ## Features
 
-### Virtual Economy Engine
-- In-memory balance cache with async SQLite persistence — instant O(1) reads
-- Single-Threaded Executor Queue eliminates all race conditions without database locks
-- Asynchronous SQLite database with WAL mode for crash resilience
-- No data rollbacks or economy sync-loss on server crashes
-- Safe peer-to-peer transfers with anti-exploit validation
-- Server leaderboards (`/baltop`)
-- Configurable starting balance (default: 500 S$)
+### Economy
 
-### Virtual Server Shop (`/shop`)
-- Server-driven Virtual Chest GUI (GENERIC_9x6 layout)
-- 11 categories with 120+ items and dynamic pagination
-- Display-Only items — moving, dragging, and shift-clicking are blocked programmatically
-- Left-click = Buy 1, Right-click = Sell 1, Shift+Click = Buy/Sell stack
-- Configurable via `shop.json` (no server restart required for price changes)
-- Text components parsed using the official Minecraft `ComponentSerialization.CODEC`
+In-memory balance cache backed by asynchronous SQLite with WAL mode — reads are instant O(1) with no database hits. Single-Threaded Executor Queue serializes all mutations, eliminating race conditions without database-level locks. Players start with 500 S$ (configurable). Peer-to-peer transfers via `/pay` with anti-exploit validation. Server-wide leaderboards via `/baltop`.
 
-### Auction House (`/ah`)
-- Player-driven marketplace incentivizing real survival exploration
-- Armor Trims and progression items excluded from shop, forcing player commerce
-- Race-condition protection via Single-Threaded Executor Queue (no database locking)
-- 72-hour listing duration with automatic expiration
-- 2% listing fee to discourage spam
+### Shop
 
-### Anti-Farm Economy Protection
-- **70% sell-price reduction** on Emeralds (Raid Farms / Trading Halls)
-- **50% sell-price reduction** on Gold Ingots (Piglin Bartering Farms)
-- **50% sell-price reduction** on Shulker Shells/Boxes (Shulker Farms)
-- **60% sell-price reduction** on Mace (Trial Chamber Farms)
-- **60% sell-price reduction** on Heavy Core (Trial Chamber Farms)
-- **50% sell-price reduction** on Breeze Rod (Trial Chamber Farms)
-- Moderate deflations on Iron, Gunpowder, String, Bones, and more
-- Hardcoded deflation table prevents configuration tampering
+Virtual chest GUI with 11 categories and 120+ items. Left-click buys 1, right-click sells 1, shift-click trades a full stack. All items are display-only — moving, dragging, and shift-clicking are blocked programmatically via Mixin packet interception. Prices are loaded from `shop.json` and support hot-reload without server restart. Text components parsed using Minecraft's official `ComponentSerialization.CODEC`.
 
-### Security & Anti-Exploit
-- Packet rate limiter (150ms cooldown per player) — blocks cheat clients
-- In-memory balance cache with Single-Threaded Executor for all mutations
-- Ghost Item prevention via forced container resync after packet cancellation
-- Anti-negative value exploitation on all financial operations
-- Maximum transaction cap and balance ceiling
-- Double-click / drag / shift-click fully blocked in virtual GUIs
+### Auction House
 
-### Modern Text Architecture
-- **Legacy formatting character is completely banned** — using it causes client disconnects and thread crashes
-- All text uses Minecraft's native `Component.literal().withStyle(ChatFormatting)` architecture
-- Shop configuration (`shop.json`) uses Minecraft's official `ComponentSerialization.CODEC`
-- Full forward compatibility with Mojang's evolving Data Components system
+Player-driven `/ah` marketplace. List any item from your main hand with `/ah sell <price>`. 72-hour listing duration with automatic expiration. 2% listing fee discourages spam listings. Race-condition protection via Single-Threaded Executor Queue — two players cannot purchase the same listing simultaneously. Armor Trims and progression items are excluded from the shop, forcing real player commerce.
+
+### Economy Protection
+
+Hardcoded anti-farm deflation table prevents configuration tampering and economy exploitation:
+
+| Material | Reduction | Reason |
+|----------|-----------|--------|
+| Emerald | 70% | Raid Farms / Trading Halls |
+| Gold | 50% | Piglin Bartering Farms |
+| Shulker Shell/Box | 50% | Shulker Farms |
+| Mace | 60% | Trial Chamber Farms |
+| Heavy Core | 60% | Trial Chamber Farms |
+| Breeze Rod | 50% | Trial Chamber Farms |
+| Trial Keys | 70% | Trial Chamber Farms |
+| Iron | 30% | Iron Farms |
+| + 8 more materials | 20-60% | Various farm exploits |
+
+---
+
+## Installation
+
+> **Requirements:** Minecraft 26.1.x · Java 25+ · Fabric Loader >= 0.19.2
+
+1. Install [Fabric Loader](https://fabricmc.net/use/) `>= 0.19.2` on your server
+2. Download the latest `.jar` from [Releases](https://github.com/mohammad-salah-qasiaa/solidus/releases)
+3. Place the `.jar` in your server's `mods/` directory
+4. Start the server — Solidus will auto-generate `config/solidus/shop.json`
+5. Customize `shop.json` as needed (supports hot-reload, no restart required)
 
 ---
 
@@ -70,7 +80,7 @@ Solidus is a 100% server-side economy and commerce engine for Minecraft Java Edi
 
 | Command | Description |
 |---------|-------------|
-| `/balance` or `/bal` | Display your current Solidus balance |
+| `/balance` / `/bal` | Display your current Solidus balance |
 | `/pay <player> <amount>` | Transfer currency to another player |
 | `/baltop` | View the server's wealthiest players (Top 10) |
 | `/shop` | Open the virtual server shop GUI |
@@ -79,67 +89,138 @@ Solidus is a 100% server-side economy and commerce engine for Minecraft Java Edi
 
 ---
 
-## Shop Categories
+## Configuration
 
-| Category | Items | Icon |
-|----------|-------|------|
-| Building Blocks | 24 | Cobblestone |
-| Ores & Minerals | 19 | Diamond |
-| Food | 16 | Cooked Beef |
-| Farming | 12 | Wheat |
-| Mob Drops & Combat | 30 | Diamond Sword |
-| Trial Challenges | 3 | Trial Key |
-| Tools & Armor | 28 | Diamond Chestplate |
-| Enchanting & Potions | 9 | Enchanting Table |
-| Redstone | 13 | Redstone |
-| Decoration | 12 | Painting |
-| Misc & Ocean | 19 | Trident |
+Solidus uses a single `shop.json` file for all shop pricing. The file is auto-generated on first run at `config/solidus/shop.json`.
+
+```json
+{
+  "sections": [
+    {
+      "name": {"text": "Ores & Minerals", "color": "aqua", "bold": true},
+      "icon": "DIAMOND",
+      "items": [
+        {
+          "material": "DIAMOND",
+          "buyPrice": 3000,
+          "sellPrice": 1800,
+          "displayName": {"text": "Diamond", "color": "aqua", "bold": true}
+        },
+        {
+          "material": "EMERALD",
+          "buyPrice": 1000,
+          "sellPrice": 300,
+          "displayName": {"text": "Emerald", "color": "green"}
+        }
+      ]
+    }
+  ]
+}
+```
+
+Text components use Minecraft's official `ComponentSerialization.CODEC` format — the same format used by the game's Data Components system. This ensures full forward compatibility with future Minecraft updates.
 
 ---
 
-## Technical Specifications
+## Compatibility
 
 | Requirement | Value |
 |-------------|-------|
-| **Minecraft Version** | Java Edition 1.21.7 (compatible 26.1.x) |
-| **Mod Loader** | Fabric Loader 0.19.2+ |
-| **Java Runtime** | Java 25 |
-| **Side Compatibility** | 100% Server-Side Only |
-| **Client Requirement** | Vanilla Minecraft (un-modded) |
-| **Database** | SQLite (WAL mode, async, in-memory cache) |
-| **GUI Library** | Native ScreenHandler (no third-party libs) |
-| **Concurrency Model** | Single-Threaded Executor Queue per subsystem |
-| **Text Parsing** | ComponentSerialization.CODEC (official Minecraft) |
+| **Minecraft** | Java Edition 26.1.x |
+| **Mod Loader** | Fabric Loader >= 0.19.2 |
+| **Java** | 25 |
+| **Side** | Server-Side Only (100%) |
+| **Client** | Vanilla Minecraft (un-modded) |
+| **Database** | SQLite (WAL mode, async) |
+| **GUI** | Native ScreenHandler (no third-party libs) |
 
 ---
 
-## Architecture: Race Condition Protection
+## FAQ
 
-Solidus uses **Single-Threaded Executor Queues** instead of database-level locking for concurrency protection. This approach is both correct and performant:
+**Does this require client mods?**
+No. Solidus is 100% server-side. Players connect with an unmodified Vanilla Minecraft Client.
 
-### Why Not BEGIN IMMEDIATE?
-SQLite's `BEGIN IMMEDIATE` does **not** provide row-level locking — it locks the **entire database file** against writes from other threads. If one player buys from the auction while another uses `/pay`, a "database is locked" exception would occur because both operations compete for the same file lock.
+**Works with Velocity / BungeeCord?**
+Yes, Solidus runs on the backend server. For proxy networks with monetization, a Commercial License is required — see [LICENSE](LICENSE).
 
-### How the Executor Queue Works
-All economy mutations and auction transactions are submitted to dedicated single-threaded executors. Each executor processes operations **sequentially, one at a time**:
+**Supports offline mode?**
+Solidus uses UUID-based identification. In offline/cracked mode, UUIDs are generated from usernames — this works but is less secure against identity spoofing.
+
+**Can I change prices without restarting?**
+Yes. `shop.json` supports hot-reload. Edit the file and use `/shop reload` (or it auto-detects changes).
+
+**What about economy exploits?**
+Solidus has multiple layers of protection: hardcoded anti-farm deflation, Single-Threaded Executor Queue for race conditions, packet rate limiting (150ms cooldown), ghost item prevention, and anti-negative value validation on all operations.
+
+**Does it work with economy plugins from other platforms?**
+No. Solidus is a standalone economy engine and does not integrate with Vault, Essentials, or other plugin-based economy systems.
+
+---
+
+## Developer Notes
+
+<details>
+<summary>Click to expand — technical architecture for developers</summary>
+
+### Concurrency: Single-Threaded Executor Queue
+
+Solidus uses **Single-Threaded Executor Queues** instead of database-level locking. SQLite's `BEGIN IMMEDIATE` does not provide row-level locking — it locks the **entire database file** against writes. If one player buys from the auction while another uses `/pay`, a "database is locked" exception would occur.
+
+Instead, all economy mutations and auction transactions are submitted to dedicated single-threaded executors:
 
 1. Operation submitted to executor queue
-2. Executor thread picks up the operation
+2. Executor thread picks up the operation sequentially
 3. In-memory cache updated immediately (instant for subsequent reads)
 4. SQLite persistence happens asynchronously
 5. Result returned via CompletableFuture
 
-This guarantees that two players cannot purchase the same auction listing simultaneously — the executor processes purchases one by one, and the second buyer simply finds the listing already marked as sold.
+This guarantees that two players cannot purchase the same auction listing simultaneously — the second buyer simply finds the listing already marked as sold.
 
-### Performance
-- Balance reads: O(1) from in-memory cache (no database query)
-- Balance writes: Cache updated immediately, persisted async
-- No lock contention: Operations are queued, not locked
-- No "database is locked" exceptions: No file-level locking needed
+### SQLite Architecture
 
----
+- **WAL mode** enabled for crash resilience and concurrent reads
+- **In-memory cache** for all balance reads — zero database queries on `/balance`
+- **Async persistence** — cache writes are flushed to disk asynchronously
+- **No `BEGIN IMMEDIATE`** — Executor Queue replaces database-level locking entirely
 
-## Project Structure
+### Text Parsing: ComponentSerialization.CODEC
+
+Shop configuration text components are parsed using Minecraft's official `ComponentSerialization.CODEC` instead of custom GSON parsers. This provides:
+
+- Full compatibility with Mojang's Data Components system
+- No breaking changes when Minecraft updates its text component format
+- Identical parsing behavior to vanilla Minecraft's own JSON text parsing
+
+### Ghost Item Prevention
+
+When a Mixin cancels a container click packet (to block item movement in virtual GUIs), the client does not immediately know about the cancellation due to network latency. This causes "ghost items" — items that appear to move on the client but never actually moved on the server.
+
+The fix is to call `player.currentScreenHandler.sendContentUpdates()` after every packet cancellation, forcing an immediate container resync from server to client.
+
+### Build System
+
+| Setting | Value |
+|---------|-------|
+| Loom Plugin | `net.fabricmc.fabric-loom` |
+| Dependency type | `implementation` (not `modImplementation`) |
+| Mappings | None (unobfuscated 26.1.x) |
+| Java target | `LanguageVersion.of(25)` |
+| Jar task | `jar` (not `remapJar`) |
+
+### Intermediary Names
+
+Without a mappings block, code in the IDE uses Intermediary names (e.g., `class_1703`) instead of official Mojang names. The Yarn mappings dependency resolves these at compile time. This is expected behavior for unobfuscated Minecraft 26.1.x environments.
+
+### Critical Rules
+
+1. **NEVER use legacy formatting characters** — causes client disconnects and thread crashes. Use `Component.literal().withStyle()` exclusively.
+2. **NEVER use `BEGIN IMMEDIATE` for concurrency** — SQLite does NOT support row-level locking. Use Executor Queues.
+3. **NEVER use third-party GUI libraries** — write native `ScreenHandler` extensions only.
+4. **ALWAYS call `sendContentUpdates()`** after canceling packets in Mixins.
+5. **Use `ComponentSerialization.CODEC`** for text component parsing from JSON.
+
+### Project Structure
 
 ```
 solidus/
@@ -149,7 +230,7 @@ solidus/
 ├── src/main/java/com/solidus/
 │   ├── SolidusMod.java                  # Main entry point
 │   ├── economy/
-│   │   ├── EconomyEngine.java           # Central coordinator
+│   │   ├── EconomyEngine.java           # Central coordinator (executor queue)
 │   │   ├── SQLiteStorage.java           # Async SQLite + in-memory cache
 │   │   ├── AntiFarmManager.java         # Deflation table (hardcoded)
 │   │   └── BalanceManager.java          # High-level balance API
@@ -187,65 +268,36 @@ solidus/
 │   └── pack.mcmeta
 ```
 
+</details>
+
 ---
 
-## Build & Installation
+## Building from Source
 
-### Prerequisites
-- JDK 25
-- Gradle 8.x+
+Make sure you have **JDK 25** installed, then:
 
-### Building
 ```bash
-git clone <repository-url>
+# Clone the repository
+git clone https://github.com/mohammad-salah-qasiaa/solidus.git
 cd solidus
+
+# Build the release jar
 ./gradlew build
 ```
 
-The compiled JAR will be in `build/libs/solidus-1.0.0-beta.jar`.
-
-### Installation
-1. Place the JAR in your server's `mods/` directory
-2. Ensure Fabric Loader 0.19.2+ is installed on the server
-3. Start the server — Solidus will auto-generate `config/solidus/shop.json`
-4. Customize `shop.json` as needed (supports hot-reload)
+The compiled `.jar` will be at:
+```
+build/libs/solidus-1.0.0-beta.jar
+```
 
 ---
 
-## Critical Rules for Developers
+## Roadmap
 
-1. **NEVER use legacy formatting characters** — It causes client disconnects and thread crashes. Use `Component.literal().withStyle()` exclusively.
-2. **NEVER use `modImplementation` for non-Fabric deps** — Use standard `implementation` in `build.gradle` for non-remapped dependencies.
-3. **NEVER use `BEGIN IMMEDIATE` for concurrency** — SQLite does NOT support row-level locking. Use Single-Threaded Executor Queues instead.
-4. **NEVER use third-party GUI libraries** — Write native `ScreenHandler` extensions only.
-5. **Java 25 strict enforcement** — The project targets `LanguageVersion.of(25)`.
-6. **Use `ComponentSerialization.CODEC`** — Not custom GSON parsers, for text component parsing from JSON.
-7. **Always call `sendContentUpdates()`** after canceling packets in Mixins to prevent ghost items.
-8. **Intermediary names in IDE** — Without mappings, code uses Intermediary names like `class_1703`. The Yarn mappings dependency resolves this at compile time.
-
----
-
-## Anti-Farm Deflation Table
-
-| Material | Factor | Reduction | Reason |
-|----------|--------|-----------|--------|
-| EMERALD, EMERALD_BLOCK | 0.30 | 70% | Anti-Raid Farm |
-| GOLD_INGOT, GOLD_BLOCK, GOLD_NUGGET, RAW_GOLD | 0.50 | 50% | Anti-Piglin Farm |
-| SHULKER_SHELL, SHULKER_BOX | 0.50 | 50% | Anti-Shulker Farm |
-| MACE | 0.40 | 60% | Anti-Trial Farm |
-| HEAVY_CORE | 0.40 | 60% | Anti-Trial Farm |
-| BREEZE_ROD | 0.50 | 50% | Anti-Trial Farm |
-| TRIAL_KEY, OMINOUS_TRIAL_KEY | 0.30 | 70% | Anti-Trial Farm |
-| OMINOUS_BOTTLE | 0.50 | 50% | Anti-Trial Farm |
-| IRON_INGOT, IRON_BLOCK, RAW_IRON | 0.70 | 30% | Anti-Iron Farm |
-| GUNPOWDER | 0.75 | 25% | Anti-Creeper Farm |
-| STRING | 0.75 | 25% | Anti-Spider Farm |
-| BONE | 0.70 | 30% | Anti-Skeleton Farm |
-| ROTTEN_FLESH | 0.60 | 40% | Anti-Zombie Farm |
-| SUGAR_CANE | 0.80 | 20% | Auto-Farm |
-| BAMBOO, KELP | 0.70 | 30% | Auto-Farm |
-| SCUTE | 0.40 | 60% | Anti-Turtle Farm |
-| NAUTILUS_SHELL | 0.50 | 50% | Anti-Drowned Farm |
+- [ ] **Transaction Taxes** — Configurable tax rate on shop purchases and auction sales
+- [ ] **Multi-Currency** — Support for multiple independent currency types
+- [ ] **REST API** — HTTP endpoint for external integrations (web dashboards, Discord bots)
+- [ ] **Redis Backend** — Optional Redis backend for multi-server economy sync
 
 ---
 
@@ -255,17 +307,15 @@ This project is licensed under the **Solidus Community & Commercial License (SCC
 
 **Copyright (c) 2026 MOHD_Gs**
 
-### Quick Summary
-
 | Use Case | Allowed? |
 |----------|----------|
-| Private / non-commercial servers | ✅ Free |
-| Study & modify source code | ✅ Free |
-| Fork & redistribute (open-source, same license) | ✅ Free |
-| Commercial servers (paid ranks, webshops, donations with rewards, etc.) | ❌ Requires Commercial License |
-| Servers with 30+ concurrent or 100+ unique players/month | ❌ Requires Commercial License |
-| Proxy networks (BungeeCord, Velocity, etc.) with monetization | ❌ Requires Commercial License |
-| Selling or relicensing as a paid product | ❌ Prohibited |
+| Private / non-commercial servers | Free |
+| Study & modify source code | Free |
+| Fork & redistribute (open-source, same license) | Free |
+| Commercial servers (paid ranks, webshops, etc.) | Requires Commercial License |
+| Servers with 30+ concurrent / 100+ unique players/month | Requires Commercial License |
+| Proxy networks (BungeeCord, Velocity) with monetization | Requires Commercial License |
+| Selling or relicensing as a paid product | Prohibited |
 
 See [LICENSE](LICENSE) for full terms.
 
@@ -273,6 +323,6 @@ See [LICENSE](LICENSE) for full terms.
 
 ---
 
-<p align="center">
-  <strong>Solidus</strong> — Built with precision by <strong>MOHD_Gs</strong>
-</p>
+<div align="center">
+Built with precision by <b>MOHD_Gs</b>
+</div>
