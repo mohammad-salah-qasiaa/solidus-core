@@ -249,13 +249,27 @@ The compiled JAR will be in `build/libs/solidus-1.0.0-beta.jar`.
 
 ---
 
-## License & Credits
+## License
 
-**Copyright 2025 MOHD_Gs. All rights reserved.**
+This project is licensed under the **Solidus Community & Commercial License (SCCL) v1.0**.
 
-Solidus Economy & Commerce Engine is developed and published by **MOHD_Gs**.
+**Copyright (c) 2026 MOHD_Gs**
 
-This project and its source code are the intellectual property of the author. Unauthorized reproduction, distribution, or modification is prohibited without explicit written permission.
+### Quick Summary
+
+| Use Case | Allowed? |
+|----------|----------|
+| Private / non-commercial servers | ✅ Free |
+| Study & modify source code | ✅ Free |
+| Fork & redistribute (open-source, same license) | ✅ Free |
+| Commercial servers (paid ranks, webshops, donations with rewards, etc.) | ❌ Requires Commercial License |
+| Servers with 30+ concurrent or 100+ unique players/month | ❌ Requires Commercial License |
+| Proxy networks (BungeeCord, Velocity, etc.) with monetization | ❌ Requires Commercial License |
+| Selling or relicensing as a paid product | ❌ Prohibited |
+
+See [LICENSE](LICENSE) for full terms.
+
+**Commercial inquiries:** Contact MOHD_Gs
 
 ---
 

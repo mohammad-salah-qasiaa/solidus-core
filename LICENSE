@@ -1,0 +1,107 @@
+Solidus Community & Commercial License (SCCL) v1.0
+
+Copyright (c) 2026 MOHD_Gs
+
+By using, modifying, distributing, or operating this software, you agree to the following terms.
+
+────────────────────────────────────────
+1. Definitions
+────────────────────────────────────────
+
+Software:
+The Solidus project including source code, binaries, assets, and derivative works.
+
+Commercial Server:
+Any Minecraft server or network that directly or indirectly generates revenue through:
+- Paid ranks
+- Webshops
+- Donations with in-game rewards
+- Premium access
+- Crates, keys, cosmetics, items
+- Subscription models
+- Cryptocurrency payments
+- Advertising revenue
+- Any monetization tied to server operation
+
+Small Community Server:
+A server operated primarily for personal, educational, testing, or non-commercial use.
+
+Derivative Work:
+Any modified version of Solidus or software containing substantial portions of its source code.
+
+────────────────────────────────────────
+2. Community License (Free Use)
+────────────────────────────────────────
+
+Permission is granted free of charge to:
+
+- Run Solidus on private or non-commercial servers.
+- Study and modify the source code.
+- Fork the project publicly.
+- Redistribute modified versions under this same license.
+
+Conditions:
+
+A) Any public modification or redistribution must publish complete source code.
+
+B) Modified versions must preserve copyright notices.
+
+C) Modified versions must clearly indicate changes.
+
+D) Selling, relicensing, or redistributing Solidus as a paid product is prohibited.
+
+────────────────────────────────────────
+3. Commercial Restriction
+────────────────────────────────────────
+
+Commercial use of Solidus is NOT permitted under this license.
+
+A server or network is considered Commercial if ANY of the following apply:
+
+A) Generates revenue directly or indirectly through:
+   - Webshops
+   - Paid ranks
+   - Donations with gameplay advantages
+   - Premium memberships
+   - Cosmetics, keys, subscriptions
+   - Advertising
+   - Cryptocurrency payments
+
+B) Operates as part of a multi-server network,
+proxy system, shared infrastructure,
+or centralized economy (including but not limited to
+BungeeCord, Velocity, Waterfall, proxies, or equivalent systems)
+where monetization occurs elsewhere.
+
+C) Public operation exceeding either:
+   - 30 concurrent players
+   OR
+   - 100 unique players during a rolling 30-day period
+
+D) Closed-source operation of modified versions intended for public use.
+
+If any condition applies,
+a Commercial License is required.
+────────────────────────────────────────
+4. Ownership
+────────────────────────────────────────
+
+Ownership of Solidus remains with MOHD_Gs.
+
+This license grants permission to use the software only.
+
+────────────────────────────────────────
+5. No Warranty
+────────────────────────────────────────
+
+THE SOFTWARE IS PROVIDED "AS IS",
+WITHOUT WARRANTY OF ANY KIND.
+
+────────────────────────────────────────
+6. Contact
+────────────────────────────────────────
+
+Commercial inquiries:
+[Email / Discord]
+
+End of License
