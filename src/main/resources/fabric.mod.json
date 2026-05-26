@@ -18,11 +18,14 @@
   ],
   "depends": {
     "fabricloader": ">=0.19.2",
-    "minecraft": "~1.21.7",
+    "minecraft": "~26.1.2",
     "java": ">=25",
     "fabric-api": "*"
   },
   "provides": {
     "solidus-api": "*"
+  },
+  "suggests": {
+    "combatkeep": "*"
   }
 }

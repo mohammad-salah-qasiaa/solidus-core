@@ -7,7 +7,7 @@
 
 ### Server-side economy, shop, and auction system for Minecraft Fabric
 
-Stable economies · Vanilla compatibility · No client installation
+Stable economies · Vanilla compatibility · No client installation · Minecraft 26.1.x Ready
 
 ---
 
@@ -310,6 +310,8 @@ docs/ARCHITECTURE.md
 
 ## Building
 
+> **Minecraft 26.1.x Migration**: This project uses **Mojang Official Mappings** (Yarn is retired). Requires **Java 25**, **Gradle 9.4+**, and **Fabric Loom 1.16+**.
+
 ```bash
 git clone <repository>
 
@@ -323,6 +325,20 @@ Output:
 ```text
 build/libs/
 ```
+
+### Migration from pre-26.1
+
+If upgrading from Minecraft 1.21.x (Yarn mappings):
+
+| Change | Before (1.21.x) | After (26.1.x) |
+| ------ | ---------------- | --------------- |
+| Loom plugin | `fabric-loom` | `net.fabricmc.fabric-loom` |
+| Mappings | `net.fabricmc:yarn:...` | **Removed** (unobfuscated) |
+| Dependencies | `modImplementation` | `implementation` |
+| Build task | `remapJar` | `jar` |
+| MC version | `1.21.7` | `26.1.2` |
+| Fabric API | `0.127.0+1.21.7` | `0.149.1+26.1.2` |
+| Java | 25 | 25 |
 
 ---
 

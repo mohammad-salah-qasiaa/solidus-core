@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'net.fabricmc.fabric-loom' version '1.10-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
 }
 
 // ──────────────────────────────────────────────────────────
@@ -8,27 +8,24 @@ plugins {
 // Minecraft 26.1.x | Fabric Loader 0.19.2+ | Java 25
 // ──────────────────────────────────────────────────────────
 //
-// ⚠️  IMPORTANT: INTERMEDIARY NAMES IN THE IDE
+// IMPORTANT: MINECRAFT 26.1.x UNOBFUSCATED BUILD
 // ──────────────────────────────────────────────────────────
-// This project builds in an UNOBFUSCATED environment without a
-// dedicated mappings block. Fabric Loom uses Yarn mappings declared
-// via the `mappings` dependency below for development-time deobfuscation.
+// Starting with Minecraft 26.1, Mojang no longer obfuscates
+// the game JAR. This means:
 //
-// However, be aware that during development in your IDE:
-// - Source code uses Yarn/Mojang-mapped names (e.g., ServerPlayer,
-//   AbstractContainerMenu, getBalance, etc.)
-// - These are resolved at compile time by the Yarn mappings dependency
-// - The compiled output JAR uses Intermediary names internally
-//   (e.g., class_1703, method_12345) for runtime remapping
+// - NO mappings dependency is needed (Yarn is retired)
+// - The Loom plugin ID changed from 'fabric-loom' (remapping)
+//   to 'net.fabricmc.fabric-loom' (no remapping)
+// - Use standard Gradle dependency configurations:
+//     modImplementation → implementation
+//     modCompileOnly    → compileOnly
+//     remapJar          → jar
+// - Minecraft source code uses Mojang's official names directly
+// - Mixin method/field references use the real (unobfuscated) names
 //
-// If Yarn mappings are NOT available or not declared, your IDE will
-// show Intermediary names like class_3222 instead of ServerPlayer.
-// The `mappings` dependency below ensures Yarn names are available
-// during development. Do NOT remove it.
-//
-// Loom handles the remapping pipeline automatically:
-//   Development: Yarn names → compile → Intermediary → runtime remap
-//   Production:  Intermediary → remapJar → Yarn/Named output
+// Build pipeline (simplified from pre-26.1):
+//   Development: Mojang names → compile → JAR (no remapping needed)
+//   Production:  JAR as-is, runs directly on unobfuscated Minecraft
 // ──────────────────────────────────────────────────────────
 
 java {
@@ -44,19 +41,20 @@ group = project.maven_group
 
 repositories {
     mavenCentral()
-    maven { url = "https://maven.fabricmc.net/" }
+    // Loom adds the essential Maven repositories to download
+    // Minecraft and libraries from automatically.
 }
 
 dependencies {
-    // Minecraft & Mappings (Yarn for deobfuscated development)
+    // Minecraft (unobfuscated since 26.1 — no mappings needed)
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 
-    // Fabric Loader & API — modImplementation required for Fabric Loom remapping
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    // Fabric Loader & API — use standard 'implementation' (not modImplementation)
+    // because Loom no longer remaps in the unobfuscated environment
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-    // Standard dependencies (not remapped by Loom)
+    // Standard dependencies
     implementation "com.google.code.gson:gson:2.12.1"
     implementation "org.xerial:sqlite-jdbc:3.47.2.0"
 
