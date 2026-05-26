@@ -36,6 +36,8 @@ import java.util.concurrent.TimeUnit;
  * - AUCTION_EXPIRED: Player's auction listing expired
  * - PAY_SEND:       Player sent money to another player
  * - PAY_RECEIVE:    Player received money from another player
+ * - DEATH_PENALTY:  Player lost money from being killed (deducted)
+ * - DEATH_REWARD:   Player gained money from killing another player
  *
  * Offline Notification Flow:
  * When a transaction involves an offline player (e.g., auction seller receiving
@@ -85,7 +87,9 @@ public class TransactionLog {
         AUCTION_BOUGHT("AUCTION_BOUGHT"),
         AUCTION_EXPIRED("AUCTION_EXPIRED"),
         PAY_SEND("PAY_SEND"),
-        PAY_RECEIVE("PAY_RECEIVE");
+        PAY_RECEIVE("PAY_RECEIVE"),
+        DEATH_PENALTY("DEATH_PENALTY"),
+        DEATH_REWARD("DEATH_REWARD");
 
         private final String code;
 

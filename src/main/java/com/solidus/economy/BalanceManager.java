@@ -120,6 +120,27 @@ public class BalanceManager {
     }
 
     /**
+     * Subtracts currency from a player's balance by UUID (for offline transactions).
+     * Rejects if the player has insufficient funds (returns -1.0).
+     *
+     * <p>This is the offline-safe version needed by mods that perform
+     * balance operations where the target player might not be online
+     * (e.g., timed penalties, death penalties, automatic fees, etc.).</p>
+     *
+     * @param uuid       The player's UUID
+     * @param playerName The player's name
+     * @param amount     The amount to subtract (must be positive)
+     * @return CompletableFuture with the new balance, or -1.0 if insufficient funds
+     */
+    public CompletableFuture<Double> subtractBalance(UUID uuid, String playerName, double amount) {
+        if (!CurrencyUtil.isValidAmount(amount)) {
+            SolidusMod.LOGGER.warn("Invalid subtract-balance amount rejected: {}", amount);
+            return CompletableFuture.completedFuture(-1.0);
+        }
+        return storage.subtractBalance(uuid, playerName, amount);
+    }
+
+    /**
      * Checks if a player can afford a specific amount.
      *
      * @param player The server player
@@ -147,6 +168,40 @@ public class BalanceManager {
      * @return CompletableFuture with TransferResult indicating outcome
      */
     public CompletableFuture<TransferResult> transfer(ServerPlayer sender, ServerPlayer receiver, double amount) {
+        return transferOffline(
+            sender.getUUID(), sender.getName().getString(),
+            receiver.getUUID(), receiver.getName().getString(),
+            amount
+        );
+    }
+
+    /**
+     * Performs an offline-safe transfer between two players by UUID.
+     * Neither player needs to be online. This is an atomic operation:
+     * either both sides succeed or neither does.
+     *
+     * <p>If the deduction from the sender fails (insufficient funds),
+     * the receiver's balance is not modified. If the addition to the
+     * receiver fails after deduction, the sender is refunded.</p>
+     *
+     * Anti-Exploit Protections:
+     * - Negative amount rejection
+     * - Zero amount rejection
+     * - Self-transfer rejection
+     * - Insufficient funds check (atomic deduct-then-add)
+     * - Maximum transaction cap enforcement
+     *
+     * @param senderUuid   The sender's UUID
+     * @param senderName   The sender's name
+     * @param receiverUuid The receiver's UUID
+     * @param receiverName The receiver's name
+     * @param amount       The amount to transfer
+     * @return CompletableFuture with TransferResult indicating outcome
+     */
+    public CompletableFuture<TransferResult> transferOffline(
+            UUID senderUuid, String senderName,
+            UUID receiverUuid, String receiverName,
+            double amount) {
         // Pre-validation (synchronous, fast checks)
         if (amount <= 0) {
             return CompletableFuture.completedFuture(
@@ -156,13 +211,13 @@ public class BalanceManager {
             return CompletableFuture.completedFuture(
                 new TransferResult(false, "Amount exceeds maximum transfer limit.", 0, 0));
         }
-        if (sender.getUUID().equals(receiver.getUUID())) {
+        if (senderUuid.equals(receiverUuid)) {
             return CompletableFuture.completedFuture(
                 new TransferResult(false, "You cannot pay yourself.", 0, 0));
         }
 
         // Atomic transfer: deduct from sender, then add to receiver
-        return storage.subtractBalance(sender.getUUID(), sender.getName().getString(), amount)
+        return storage.subtractBalance(senderUuid, senderName, amount)
             .thenCompose(newSenderBalance -> {
                 if (newSenderBalance < 0) {
                     // Insufficient funds - nothing was deducted
@@ -170,15 +225,15 @@ public class BalanceManager {
                         new TransferResult(false, "Insufficient funds.", 0, 0));
                 }
                 // Deduction succeeded, now add to receiver
-                return storage.addBalance(receiver.getUUID(), receiver.getName().getString(), amount)
+                return storage.addBalance(receiverUuid, receiverName, amount)
                     .thenApply(newReceiverBalance -> {
                         if (newReceiverBalance < 0) {
                             // CRITICAL: Addition failed after deduction - log error
                             // Attempt to refund sender
                             SolidusMod.LOGGER.error(
                                 "CRITICAL: Transfer add failed after deduct! Refunding sender. Sender: {}, Receiver: {}, Amount: {}",
-                                sender.getName().getString(), receiver.getName().getString(), amount);
-                            storage.addBalance(sender.getUUID(), sender.getName().getString(), amount);
+                                senderName, receiverName, amount);
+                            storage.addBalance(senderUuid, senderName, amount);
                             return new TransferResult(false, "Transfer failed. Please try again.", 0, 0);
                         }
                         return new TransferResult(true, "Transfer successful.", newSenderBalance, newReceiverBalance);

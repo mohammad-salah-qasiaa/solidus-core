@@ -1,5 +1,6 @@
 package com.solidus;
 
+import com.solidus.api.SolidusAPI;
 import com.solidus.commands.BalanceCommand;
 import com.solidus.commands.BaltopCommand;
 import com.solidus.commands.PayCommand;
@@ -90,6 +91,10 @@ public class SolidusMod implements DedicatedServerModInitializer {
         // Required because MinecraftServer.getServer() is NOT available in Fabric
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
             auctionManager.setServer(server);
+
+            // Initialize the public API for inter-mod integration
+            SolidusAPI.initialize(economyEngine);
+
             LOGGER.info("Solidus: MinecraftServer instance injected into AuctionManager.");
         });
 
