@@ -5,10 +5,6 @@
 
 
 
-
-
-
-
 ### Server-side economy, shop, and auction system for Minecraft Fabric
 
 Stable economies · Vanilla compatibility · No client installation
@@ -30,6 +26,7 @@ Create long-term survival economies without requiring client mods, resource pack
 * Player-driven auction house
 * Anti-inflation economy balancing
 * Crash-resilient persistence
+* Inter-mod API for third-party integration
 * Minimal operational overhead
 
 ---
@@ -45,8 +42,10 @@ Features include:
 * Memory-backed balance reads
 * Async SQLite persistence
 * Configurable starting balance
-* Secure player transfers (`/pay`)
+* Secure player transfers (`/pay`) — online and offline
 * Global wealth leaderboard (`/baltop`)
+* Full transaction history (`/transactions`)
+* Offline notifications on login
 * Consistency-focused execution model
 
 ---
@@ -60,6 +59,7 @@ Includes:
 * 11 categories
 * 120+ configured items
 * Stack trading support
+* Item search (`/shop search <query>`)
 * Hot-reload configuration
 * Display-only GUI protection
 
@@ -71,10 +71,14 @@ Marketplace for player-to-player trading.
 
 Capabilities:
 
-* Item listing directly from inventory
-* Listing expiration
+* Item listing directly from inventory (`/ah sell <price>`)
+* Listing expiration with item return
+* Reclaim expired items (`/ah collect`)
+* Cancel own listings (`/ah cancel <uuid>`)
+* Sort listings by price, newest, or material (`/ah sort`)
 * Listing fee support
 * Purchase protection
+* Offline seller notifications
 * Progression-focused balancing
 
 ---
@@ -92,6 +96,38 @@ Examples:
 | Iron                 | 30%                   |
 | Trial rewards        | 50–70%                |
 | Additional materials | Configured internally |
+
+---
+
+### Inter-Mod API
+
+Solidus exposes a stable public API (`com.solidus.api.SolidusAPI`) for other Fabric mods to integrate with the economy system. No compile-time dependency required — mods can access all balance operations via pure reflection.
+
+Available operations:
+
+| Method | Description |
+| ------ | ----------- |
+| `getBalance` | Get player balance (online or offline) |
+| `addBalance` | Add currency to a player |
+| `subtractBalance` | Subtract currency from a player |
+| `transfer` | Atomic player-to-player transfer |
+| `transferOffline` | Atomic transfer by UUID (no online requirement) |
+| `hasSufficientBalance` | Check if a player can afford an amount |
+| `getTopBalances` | Wealth leaderboard data |
+| `getTransactionLog` | Log custom transaction events |
+
+Integration example (zero compile dependency):
+
+```java
+// Check if Solidus is loaded
+if (FabricLoader.getInstance().isModLoaded("solidus")) {
+    Class<?> apiClass = Class.forName("com.solidus.api.SolidusAPI");
+    Object api = apiClass.getMethod("getInstance").invoke(null);
+    // Call any method via reflection
+}
+```
+
+See `docs/ARCHITECTURE.md` for the full API reference and integration guide.
 
 ---
 
@@ -134,14 +170,20 @@ No client installation required.
 
 ## Commands
 
-| Command    | Description        |
-| ---------- | ------------------ |
-| `/balance` | Show balance       |
-| `/pay`     | Transfer currency  |
-| `/baltop`  | Wealth leaderboard |
-| `/shop`    | Open shop          |
-| `/ah`      | Open auction       |
-| `/ah sell` | Create listing     |
+| Command              | Description                  |
+| -------------------- | ---------------------------- |
+| `/balance`           | Show balance                 |
+| `/pay <player> <amount>` | Transfer to online player |
+| `/pay offline <name> <amount>` | Transfer to offline player |
+| `/baltop`            | Wealth leaderboard           |
+| `/shop`              | Open shop                    |
+| `/shop search <query>` | Search shop items          |
+| `/ah`                | Open auction                 |
+| `/ah sell <price>`   | Create listing               |
+| `/ah collect`        | Reclaim expired items        |
+| `/ah cancel <uuid>`  | Cancel own listing           |
+| `/ah sort <order>`   | Sort listings                |
+| `/transactions [page]` | Transaction history        |
 
 ---
 
@@ -220,11 +262,13 @@ Configuration supports hot reload.
 
 ---
 
-### Does Solidus integrate with economy plugins?
+### Does Solidus integrate with other mods?
 
-No.
+Yes.
 
-Solidus is intentionally standalone.
+Solidus provides a stable public API (`SolidusAPI`) that other Fabric mods can use to read balances, transfer currency, and log transactions. Integration works via reflection with zero compile-time dependency — the other mod does not need Solidus in its build path.
+
+If Solidus is not installed, the integrating mod simply skips the API calls and continues working normally.
 
 ---
 
@@ -239,6 +283,7 @@ Solidus separates:
 * Auction
 * Persistence
 * Networking
+* Public API
 
 ### Storage
 

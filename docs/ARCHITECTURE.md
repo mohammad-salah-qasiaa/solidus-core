@@ -13,17 +13,22 @@ solidus/
 ├── gradle.properties
 ├── src/main/java/com/solidus/
 │   ├── SolidusMod.java                  # Main entry point
+│   ├── api/
+│   │   ├── SolidusAPI.java              # Stable public API for inter-mod integration
+│   │   └── SolidusIntegration.java      # Reference implementation (CombatKeepMod example)
 │   ├── economy/
 │   │   ├── EconomyEngine.java           # Central coordinator (executor queue)
 │   │   ├── SQLiteStorage.java           # Async SQLite + in-memory cache
+│   │   ├── TransactionLog.java          # Audit trail & offline notifications
 │   │   ├── AntiFarmManager.java         # Deflation table (hardcoded)
-│   │   └── BalanceManager.java          # High-level balance API
+│   │   └── BalanceManager.java          # High-level balance API (online + offline)
 │   ├── commands/
 │   │   ├── BalanceCommand.java          # /balance, /bal
-│   │   ├── PayCommand.java              # /pay
+│   │   ├── PayCommand.java              # /pay (online + offline)
 │   │   ├── BaltopCommand.java           # /baltop
-│   │   ├── ShopCommand.java             # /shop
-│   │   └── AuctionCommand.java          # /ah, /ah sell
+│   │   ├── ShopCommand.java             # /shop, /shop search
+│   │   ├── AuctionCommand.java          # /ah, /ah sell, /ah collect, /ah cancel, /ah sort
+│   │   └── TransactionsCommand.java     # /transactions
 │   ├── shop/
 │   │   ├── ShopManager.java             # Shop config loader & Codec parser
 │   │   ├── ShopGUI.java                 # GUI layout builder
@@ -62,14 +67,18 @@ solidus/
 
 ```
 ┌─────────────────────────────────────────────┐
+│             Public API (Stable)             │
+│  SolidusAPI · SolidusIntegration            │
+├─────────────────────────────────────────────┤
 │                 Commands                     │
 │  BalanceCommand · PayCommand · BaltopCommand │
 │  ShopCommand · AuctionCommand                │
+│  TransactionsCommand                        │
 ├─────────────────────────────────────────────┤
 │              Business Logic                  │
 │  EconomyEngine · BalanceManager              │
 │  ShopManager · AuctionManager                │
-│  AntiFarmManager                             │
+│  AntiFarmManager · TransactionLog            │
 ├─────────────────────────────────────────────┤
 │              Presentation                    │
 │  ShopGUI · ShopScreenHandler                │
@@ -172,6 +181,75 @@ The `AntiFarmManager` uses a hardcoded `Map<Item, Double>` that cannot be modifi
 | NAUTILUS_SHELL | 0.50 | 50% | Anti-Drowned Farm |
 
 **How it works:** When a player sells an item, `AntiFarmManager.getDeflationFactor(item)` is called. If the item exists in the deflation table, the sell price is multiplied by the factor before being returned. For example, selling an Emerald with a base price of 1000 S$ would yield only 300 S$ (factor 0.30).
+
+---
+
+## Inter-Mod API
+
+Solidus provides a **stable public API** in `com.solidus.api.SolidusAPI` for other mods to integrate with the economy system. This is the **only** class external mods should depend on — internal classes may change between versions without notice.
+
+### API Methods
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `getInstance()` | `SolidusAPI` | Get API singleton (null if not loaded) |
+| `isAvailable()` | `boolean` | Check if Solidus is ready |
+| `getBalance(ServerPlayer)` | `CompletableFuture<Double>` | Get online player's balance |
+| `getBalanceOffline(UUID, String)` | `CompletableFuture<Double>` | Get offline player's balance |
+| `addBalance(ServerPlayer, double)` | `CompletableFuture<Double>` | Add to online player |
+| `addBalanceOffline(UUID, String, double)` | `CompletableFuture<Double>` | Add to offline player |
+| `subtractBalance(ServerPlayer, double)` | `CompletableFuture<Double>` | Subtract from online player |
+| `subtractBalanceOffline(UUID, String, double)` | `CompletableFuture<Double>` | Subtract from offline player |
+| `hasSufficientBalance(ServerPlayer, double)` | `CompletableFuture<Boolean>` | Check affordability |
+| `transfer(ServerPlayer, ServerPlayer, double)` | `CompletableFuture<TransferResult>` | Atomic P2P transfer |
+| `transferOffline(UUID, String, UUID, String, double)` | `CompletableFuture<TransferResult>` | Atomic offline transfer |
+| `getTopBalances(int)` | `CompletableFuture<List<BalanceEntry>>` | Leaderboard |
+| `getTransactionLog()` | `TransactionLog` | For logging custom events |
+
+### Integration Pattern (No Compile Dependency)
+
+External mods should use **reflection** to avoid a compile-time dependency on Solidus:
+
+```java
+// 1. Check if Solidus is loaded
+if (!FabricLoader.getInstance().isModLoaded("solidus")) return;
+
+// 2. Get the API instance via reflection
+Class<?> apiClass = Class.forName("com.solidus.api.SolidusAPI");
+Method getInstance = apiClass.getMethod("getInstance");
+Object api = getInstance.invoke(null);
+if (api == null) return;
+
+// 3. Call methods via reflection
+Method getBalance = apiClass.getMethod("getBalance", ServerPlayer.class);
+CompletableFuture<Double> balance = (CompletableFuture<Double>) getBalance.invoke(api, player);
+```
+
+### CombatKeepMod Integration Example
+
+`SolidusIntegration.java` provides a reference implementation for the CombatKeepMod integration. On combat death, it deducts a percentage of the victim's balance and gives it to the killer:
+
+```java
+// In CombatKeepMod's death callback:
+SolidusIntegration.applyDeathPenalty(victim, killer, 0.15);
+```
+
+The integration uses `DEATH_PENALTY` and `DEATH_REWARD` transaction types, which appear in the player's `/transactions` history.
+
+### Transaction Types for External Mods
+
+| Type | Description |
+|------|-------------|
+| `DEATH_PENALTY` | Player lost currency from being killed |
+| `DEATH_REWARD` | Player gained currency from killing another player |
+| `SHOP_BUY` | Player purchased from the server shop |
+| `SHOP_SELL` | Player sold to the server shop |
+| `AUCTION_SOLD` | Player's auction item was purchased |
+| `AUCTION_BOUGHT` | Player purchased from the auction house |
+| `PAY_SEND` | Player sent money to another player |
+| `PAY_RECEIVE` | Player received money from another player |
+
+External mods can log custom transactions via `getTransactionLog().log(...)` so they appear in the player's `/transactions` history.
 
 ---
 
