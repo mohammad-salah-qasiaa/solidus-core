@@ -204,16 +204,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for technical details and contribution guid
 
 ## License
 
-**Solidus Community & Commercial License (SCCL) v1.0**
-
-| Usage | Status |
-| --- | --- |
-| Private servers | Allowed |
-| Study & modify | Allowed |
-| Open redistribution | Allowed |
-| Commercial use | License required |
-
-See `LICENSE`.
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
 ---
 

@@ -1,55 +1,21 @@
-────────────────────────────────────────
-3. Commercial Restriction
-────────────────────────────────────────
+MIT License
 
-Commercial use of Solidus is NOT permitted under this license.
+Copyright (c) 2025 MOHD_Gs
 
-A server or network is considered Commercial if ANY of the following apply:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-A) Generates revenue directly or indirectly through:
-   - Webshops
-   - Paid ranks
-   - Donations with gameplay advantages
-   - Premium memberships
-   - Cosmetics, keys, subscriptions
-   - Advertising
-   - Cryptocurrency payments
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-B) Operates as part of a multi-server network, proxy system, shared infrastructure, or centralized economy (including but not limited to BungeeCord, Velocity, Waterfall, proxies, or equivalent systems) where monetization occurs elsewhere on the network.
-
-C) Public operation exceeding either:
-   - 30 concurrent players (network-wide if connected via a proxy system)
-   - OR 100 unique players during a rolling 30-day period.
-
-D) Closed-source operation of modified versions intended for public use.
-
-If any condition applies, a Commercial License is required.
-
-────────────────────────────────────────
-4. Ownership
-────────────────────────────────────────
-
-Ownership of Solidus remains with MOHD_Gs. This license grants permission to use the software only.
-
-────────────────────────────────────────
-5. Termination
-────────────────────────────────────────
-
-Any breach of the terms of this License automatically terminates all permissions granted to you with immediate effect, requiring the immediate cessation of the Software's operation on your server or network.
-
-────────────────────────────────────────
-6. No Warranty
-────────────────────────────────────────
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
-
-────────────────────────────────────────
-7. Contact & Governing Law
-────────────────────────────────────────
-
-This license is governed by international copyright laws.
-Commercial inquiries:
-mohdmxmxm@gmail.com
-mohammadsalah0441_49582
-
-End of License
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
