@@ -136,14 +136,6 @@ public final class TextUtil {
     }
 
     /**
-     * Creates a deflated sell price warning lore line for anti-farm items.
-     */
-    public static Component deflatedSellLore(double price, String reason) {
-        return Component.literal("Sell: " + formatCurrency(price) + " (" + reason + ")")
-            .withStyle(style -> style.withColor(ChatFormatting.DARK_RED).withItalic(true));
-    }
-
-    /**
      * Formats a numeric value as a currency string.
      */
     public static String formatCurrency(double amount) {

@@ -6,7 +6,6 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import com.solidus.SolidusMod;
-import com.solidus.economy.AntiFarmManager;
 import com.solidus.economy.BalanceManager;
 import com.solidus.economy.EconomyEngine;
 import com.solidus.economy.TransactionLog;
@@ -130,13 +129,7 @@ public class ShopManager {
         double buyPrice = obj.has("buy-price") ? obj.get("buy-price").getAsDouble() : -1;
         double sellPrice = obj.has("sell-price") ? obj.get("sell-price").getAsDouble() : -1;
 
-        // Apply anti-farm deflation to sell price
-        double originalSellPrice = sellPrice;
-        if (sellPrice > 0) {
-            sellPrice = AntiFarmManager.applyDeflation(material, sellPrice);
-        }
-
-        return new ShopItem(material, buyPrice, sellPrice, originalSellPrice);
+        return new ShopItem(material, buyPrice, sellPrice);
     }
 
     /**
@@ -287,10 +280,9 @@ public class ShopManager {
      *
      * Transaction Flow (fully async — no server thread blocking):
      * 1. Validate the item exists and has a valid sell price
-     * 2. Apply anti-farm deflation to the sell price
-     * 3. Verify the player has the item in their inventory
-     * 4. Remove the item from the player's inventory
-     * 5. Atomically add the sell price to the player's balance (async chain)
+     * 2. Verify the player has the item in their inventory
+     * 3. Remove the item from the player's inventory
+     * 4. Atomically add the sell price to the player's balance (async chain)
      *
      * No .join() is used — the balance add operation is chained with
      * .thenAccept() and server-thread callbacks via player.server.execute(),
@@ -321,7 +313,7 @@ public class ShopManager {
         // to prevent double-sell race — the player is interacting with the GUI)
         removeItemFromInventory(player, material, quantity);
 
-        // Calculate sell price (already deflated by AntiFarmManager during loading)
+        // Calculate sell price
         double totalValue = CurrencyUtil.round(item.sellPrice() * quantity);
 
         // Add balance asynchronously — no .join(), no server thread blocking
@@ -336,15 +328,9 @@ public class ShopManager {
                     return;
                 }
 
-                // Success notification with deflation warning if applicable
+                // Success notification
                 Component message = TextUtil.success("Sold " + quantity + "x " + material + " for ")
                     .append(TextUtil.currency(CurrencyUtil.format(totalValue)));
-
-                if (AntiFarmManager.isDeflated(material)) {
-                    String reason = AntiFarmManager.getDeflationReason(material);
-                    message = message.append(TextUtil.styled(
-                        " [" + reason + " - Deflated]", ChatFormatting.DARK_RED));
-                }
 
                 // Log transaction
                 economyEngine.getTransactionLog().log(
@@ -456,15 +442,13 @@ public class ShopManager {
     /**
      * Represents a single shop item with pricing.
      *
-     * @param material         The Minecraft Material name (e.g., "DIAMOND")
-     * @param buyPrice         Price to buy 1 unit (-1 = not purchasable)
-     * @param sellPrice        Price received for selling 1 unit (after deflation)
-     * @param originalSellPrice Price before anti-farm deflation was applied
+     * @param material  The Minecraft Material name (e.g., "DIAMOND")
+     * @param buyPrice  Price to buy 1 unit (-1 = not purchasable)
+     * @param sellPrice Price received for selling 1 unit
      */
     public record ShopItem(
         String material,
         double buyPrice,
-        double sellPrice,
-        double originalSellPrice
+        double sellPrice
     ) {}
 }

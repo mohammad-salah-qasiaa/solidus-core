@@ -3,7 +3,6 @@ package com.solidus.shop;
 import com.solidus.SolidusMod;
 import com.solidus.util.CurrencyUtil;
 import com.solidus.util.TextUtil;
-import com.solidus.economy.AntiFarmManager;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -216,12 +215,7 @@ public final class ShopGUI {
 
         // Sell price
         if (shopItem.sellPrice() > 0) {
-            if (AntiFarmManager.isDeflated(shopItem.material())) {
-                String reason = AntiFarmManager.getDeflationReason(shopItem.material());
-                lore.add(TextUtil.deflatedSellLore(shopItem.sellPrice(), reason));
-            } else {
-                lore.add(TextUtil.sellPriceLore(shopItem.sellPrice()));
-            }
+            lore.add(TextUtil.sellPriceLore(shopItem.sellPrice()));
             lore.add(TextUtil.loreLine("  Right-Click: Sell 1 | Shift+Right-Click: Sell All"));
         } else {
             lore.add(TextUtil.styled("Sell: Not Available", ChatFormatting.GRAY));

@@ -111,14 +111,8 @@ public class ShopCommand {
 
                 // Sell price
                 if (item.sellPrice() > 0) {
-                    if (item.sellPrice() < item.originalSellPrice()) {
-                        line = line.append(TextUtil.styled("Sell: ", ChatFormatting.DARK_RED))
-                            .append(TextUtil.currency(CurrencyUtil.format(item.sellPrice())))
-                            .append(TextUtil.styled(" (Deflated)", ChatFormatting.DARK_RED));
-                    } else {
-                        line = line.append(TextUtil.styled("Sell: ", ChatFormatting.RED))
-                            .append(TextUtil.currency(CurrencyUtil.format(item.sellPrice())));
-                    }
+                    line = line.append(TextUtil.styled("Sell: ", ChatFormatting.RED))
+                        .append(TextUtil.currency(CurrencyUtil.format(item.sellPrice())));
                 } else {
                     line = line.append(TextUtil.styled("Sell: - ", ChatFormatting.DARK_GRAY));
                 }
