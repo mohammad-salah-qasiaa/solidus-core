@@ -22,9 +22,9 @@
     "java": ">=25",
     "fabric-api": "*"
   },
-  "provides": {
-    "solidus-api": "*"
-  },
+  "provides": [
+    "solidus-api"
+  ],
   "suggests": {
     "combatkeep": "*"
   }
