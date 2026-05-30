@@ -94,8 +94,8 @@ Solidus applies sell-price reductions to farmed resources, configured directly i
 
 | Platform        | Link        |
 | --------------- | ----------- |
-| GitHub Releases | Releases    |
-| Modrinth        | Coming soon |
+| GitHub Releases | [Releases](https://github.com/mohd-gs/solidus-core/releases) |
+| Modrinth        | [MOHD_Gs](https://modrinth.com/user/MOHD_Gs) |
 
 ---
 

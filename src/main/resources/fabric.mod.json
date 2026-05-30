@@ -5,7 +5,10 @@
   "name": "Solidus",
   "description": "Advanced Server-Side Economy & Commerce Engine for Minecraft",
   "authors": ["MOHD_Gs"],
-  "contact": {},
+  "contact": {
+    "homepage": "https://modrinth.com/user/MOHD_Gs",
+    "sources": "https://github.com/mohd-gs/solidus-core"
+  },
   "license": "All Rights Reserved",
   "environment": "server",
   "entrypoints": {
