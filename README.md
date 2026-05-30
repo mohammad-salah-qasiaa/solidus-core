@@ -61,6 +61,23 @@ Marketplace for player-to-player trading.
 * Listing fee support
 * Offline seller notifications
 
+### Sell System (`/sell`)
+
+Sell items directly from your inventory or through a visual GUI.
+
+* **`/sell gui`** — Opens a virtual chest interface where you place items to sell. Sellable items are processed and paid for; unsellable items are returned to your inventory (or dropped on the ground if inventory is full).
+* **`/sell all`** — Instantly sells every sellable item in your inventory.
+* **`/sell all <item>`** — Sells all instances of a specific item (e.g., `/sell all ender_pearl`). Supports both underscores and spaces, and partial name matching.
+
+#### Shulker Box Support
+
+All sell commands fully support shulker boxes:
+
+* Items inside shulker boxes are scanned and sold just like regular inventory items.
+* When using `/sell gui`, placing a shulker box in the sell window will sell all sellable contents inside it. Unsellable items stay inside the shulker box, and the shulker box is returned to your inventory.
+* When using `/sell all` or `/sell all <item>`, matching items inside shulker boxes are sold as well. The shulker box is updated in place with only the remaining unsellable items.
+* If all items inside a shulker box are sold and the shulker box itself is sellable (listed in the shop), it will also be sold automatically.
+
 ### Economy Protection
 
 Solidus applies sell-price reductions to farmed resources, configured directly in `shop.json` by the server operator. This gives you full control over economic balance — adjust prices to counter inflation from automated farms without needing to restart the server.
@@ -107,6 +124,9 @@ No client installation required.
 | `/baltop` | Wealth leaderboard |
 | `/shop` | Open shop |
 | `/shop search <query>` | Search shop items |
+| `/sell gui` | Open sell GUI (place items to sell) |
+| `/sell all` | Sell all sellable items in inventory |
+| `/sell all <item>` | Sell all of a specific item (e.g. `ender_pearl`) |
 | `/ah` | Open auction |
 | `/ah sell <price>` | Create listing |
 | `/ah collect` | Reclaim expired items |
