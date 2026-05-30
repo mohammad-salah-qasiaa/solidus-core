@@ -39,7 +39,7 @@ public class BaltopCommand {
 
     private static void executeBaltop(ServerPlayer player, BalanceManager balanceManager) {
         balanceManager.getTopBalances(TOP_COUNT).thenAccept(entries -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 // Header
                 player.sendSystemMessage(TextUtil.styledBold(
                     "═══════ Solidus Leaderboard ═══════", ChatFormatting.GOLD));

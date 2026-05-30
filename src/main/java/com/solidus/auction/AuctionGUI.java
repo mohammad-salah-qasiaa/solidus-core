@@ -49,7 +49,7 @@ public final class AuctionGUI {
      */
     public static void openAuction(ServerPlayer player, AuctionManager auctionManager) {
         auctionManager.getActiveListings().thenAccept(listings -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 buildAndOpenAuctionScreen(player, auctionManager, listings, 0, false);
             });
         });
@@ -65,7 +65,7 @@ public final class AuctionGUI {
     public static void openAuctionSorted(ServerPlayer player, AuctionManager auctionManager,
                                           AuctionManager.SortOrder sortOrder) {
         auctionManager.getActiveListings(sortOrder).thenAccept(listings -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 // Show sort indicator in header
                 buildAndOpenAuctionScreen(player, auctionManager, listings, 0, false, sortOrder);
             });
@@ -77,7 +77,7 @@ public final class AuctionGUI {
      */
     public static void openMyListings(ServerPlayer player, AuctionManager auctionManager) {
         auctionManager.getListingsBySeller(player.getUUID()).thenAccept(listings -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 buildAndOpenAuctionScreen(player, auctionManager, listings, 0, true);
             });
         });
@@ -167,7 +167,7 @@ public final class AuctionGUI {
         ItemStack display;
         try {
             net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(entry.materialName().toLowerCase()));
+                .get(new net.minecraft.resources.ResourceLocation(entry.materialName().toLowerCase()));
             display = new ItemStack(item);
         } catch (Exception e) {
             display = new ItemStack(Items.PAPER);

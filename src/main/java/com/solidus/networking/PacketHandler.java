@@ -74,12 +74,12 @@ public class PacketHandler {
      * @param player    The player who clicked
      * @param slotIndex The slot index that was clicked
      * @param button    The button used (0=left, 1=right)
-     * @param clickType The type of click
+     * @param containerInput The container input (replaces ClickType in 26.1.x)
      * @return true if the click was processed by a Solidus handler,
      *         false if it should be passed through to vanilla handling
      */
     public boolean handleContainerClick(ServerPlayer player, int slotIndex,
-                                          int button, net.minecraft.world.inventory.ClickType clickType) {
+                                          int button, net.minecraft.world.inventory.ContainerInput containerInput) {
         // Rate limit check
         if (!rateLimiter.allowClick(player.getUUID())) {
             // Click came too fast - silently drop the packet
@@ -93,20 +93,20 @@ public class PacketHandler {
 
         if (currentMenu instanceof ShopScreenHandler shopHandler) {
             // Route to shop click handler
-            shopHandler.clicked(slotIndex, button, clickType, player);
+            shopHandler.clicked(slotIndex, button, containerInput, player);
             return true;
         }
 
         if (currentMenu instanceof SellScreenHandler sellHandler) {
             // Route to sell click handler - all clicks are handled manually
             // because the sell GUI allows item placement
-            sellHandler.clicked(slotIndex, button, clickType, player);
+            sellHandler.clicked(slotIndex, button, containerInput, player);
             return true;
         }
 
         if (currentMenu instanceof AuctionScreenHandler auctionHandler) {
             // Route to auction click handler
-            auctionHandler.clicked(slotIndex, button, clickType, player);
+            auctionHandler.clicked(slotIndex, button, containerInput, player);
             return true;
         }
 

@@ -51,7 +51,7 @@ public class TransactionsCommand {
         int offset = (page - 1) * PAGE_SIZE;
 
         transactionLog.getTransactions(player.getUUID(), PAGE_SIZE + offset).thenAccept(allEntries -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 // Header
                 player.sendSystemMessage(TextUtil.styledBold(
                     "═══════ Transaction History ═══════", ChatFormatting.GOLD));

@@ -41,7 +41,7 @@ public class BalanceCommand {
     private static void executeBalance(ServerPlayer player, BalanceManager balanceManager) {
         balanceManager.getBalance(player).thenAccept(balance -> {
             // Schedule notification on the server thread to avoid thread-safety issues
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 player.sendSystemMessage(
                     TextUtil.styledBold("Solidus Balance: ", net.minecraft.ChatFormatting.DARK_AQUA)
                         .append(TextUtil.currency(CurrencyUtil.format(balance)))

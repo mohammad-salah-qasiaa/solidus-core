@@ -209,7 +209,7 @@ public class ShopManager {
      * 4. Spawn the purchased item stack into the player's inventory
      *
      * No .join() is used — all CompletableFuture operations are chained
-     * with .thenAccept() and server-thread callbacks via player.server.execute(),
+     * with .thenAccept() and server-thread callbacks via player.getServer().execute(),
      * preventing any server tick thread blocking.
      *
      * @param player     The buying player
@@ -229,7 +229,7 @@ public class ShopManager {
 
         // Full async chain — no .join(), no server thread blocking
         balanceManager.getBalance(player).thenAccept(balance -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 if (balance < totalCost) {
                     player.sendSystemMessage(
                         TextUtil.error("Insufficient funds! You need " + CurrencyUtil.format(totalCost)
@@ -239,7 +239,7 @@ public class ShopManager {
 
                 // Deduct balance asynchronously
                 balanceManager.subtractBalance(player, totalCost).thenAccept(newBalance -> {
-                    player.server.execute(() -> {
+                    player.getServer().execute(() -> {
                         if (newBalance < 0) {
                             player.sendSystemMessage(TextUtil.error("Transaction failed. Please try again."));
                             return;
@@ -285,7 +285,7 @@ public class ShopManager {
      * 4. Atomically add the sell price to the player's balance (async chain)
      *
      * No .join() is used — the balance add operation is chained with
-     * .thenAccept() and server-thread callbacks via player.server.execute(),
+     * .thenAccept() and server-thread callbacks via player.getServer().execute(),
      * preventing any server tick thread blocking.
      *
      * IMPORTANT: Items are removed from inventory BEFORE the async balance
@@ -319,7 +319,7 @@ public class ShopManager {
         // Add balance asynchronously — no .join(), no server thread blocking
         BalanceManager balanceManager = economyEngine.getBalanceManager();
         balanceManager.addBalance(player, totalValue).thenAccept(newBalance -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 if (newBalance < 0) {
                     // CRITICAL: Balance add failed after item removal - item is lost
                     SolidusMod.LOGGER.error("CRITICAL: Sell balance add failed for {}! Item lost: {}x{}",
@@ -369,7 +369,7 @@ public class ShopManager {
     private net.minecraft.world.item.ItemStack createItemStack(String material, int quantity) {
         try {
             net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(material.toLowerCase()));
+                .get(new net.minecraft.resources.ResourceLocation(material.toLowerCase()));
             if (item == null) {
                 SolidusMod.LOGGER.error("Unknown material: {}", material);
                 return net.minecraft.world.item.ItemStack.EMPTY;
@@ -397,7 +397,7 @@ public class ShopManager {
 
     private boolean hasItemInInventory(ServerPlayer player, String material, int quantity) {
         int count = 0;
-        for (net.minecraft.world.item.ItemStack stack : player.getInventory().items) {
+        for (net.minecraft.world.item.ItemStack stack : player.getInventory().getItems()) {
             if (!stack.isEmpty() && getMaterialName(stack).equalsIgnoreCase(material)) {
                 count += stack.getCount();
             }
@@ -407,8 +407,8 @@ public class ShopManager {
 
     private void removeItemFromInventory(ServerPlayer player, String material, int quantity) {
         int remaining = quantity;
-        for (int i = 0; i < player.getInventory().items.size() && remaining > 0; i++) {
-            net.minecraft.world.item.ItemStack stack = player.getInventory().items.get(i);
+        for (int i = 0; i < player.getInventory().getContainerSize() && remaining > 0; i++) {
+            net.minecraft.world.item.ItemStack stack = player.getInventory().getItem(i);
             if (!stack.isEmpty() && getMaterialName(stack).equalsIgnoreCase(material)) {
                 int toRemove = Math.min(stack.getCount(), remaining);
                 stack.shrink(toRemove);
@@ -429,7 +429,7 @@ public class ShopManager {
         BalanceManager balanceManager = economyEngine.getBalanceManager();
 
         balanceManager.addBalance(player, totalEarnings).thenAccept(newBalance -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 if (newBalance < 0) {
                     SolidusMod.LOGGER.error("CRITICAL: Sell-all balance add failed for {}! Items lost. Amount: {}",
                         player.getName().getString(), totalEarnings);

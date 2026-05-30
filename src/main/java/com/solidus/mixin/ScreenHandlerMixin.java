@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Ghost Item Prevention:
  * If for any reason a click reaches this mixin and would result in item
  * movement in a Solidus virtual GUI, we cancel it AND force a container
- * resync via sendContentUpdates() to prevent ghost items from appearing
+ * resync via broadcastChanges() to prevent ghost items from appearing
  * on the client due to the server-client state mismatch.
  */
 @Mixin(AbstractContainerMenu.class)
@@ -52,8 +52,12 @@ public abstract class ScreenHandlerMixin {
      * is skipped entirely and we force a container resync to prevent ghost items.
      */
     @Inject(method = "clicked", at = @At("HEAD"), cancellable = true)
+    // TODO: 26.1.x - ClickType → ContainerInput; method signature changed:
+    //  clicked(Slot, int, ClickType, Player) → clicked(Slot, int, ContainerInput, Player)
+    //  The button parameter may have been removed (absorbed into ContainerInput).
+    //  Verify the exact new signature at compile time.
     private void onClicked(net.minecraft.world.inventory.Slot slot, int slotIndex,
-                            int button, net.minecraft.world.inventory.ClickType clickType,
+                            int button, net.minecraft.world.inventory.ContainerInput containerInput,
                             net.minecraft.world.entity.player.Player player, CallbackInfo ci) {
         // Only apply to Solidus virtual GUIs
         if (player instanceof ServerPlayer serverPlayer) {
@@ -76,7 +80,7 @@ public abstract class ScreenHandlerMixin {
                 // after the cancellation. Without this, the client may show
                 // phantom items due to the click being canceled server-side
                 // but already applied optimistically on the client.
-                currentMenu.sendContentUpdates();
+                currentMenu.broadcastChanges();
             }
         }
     }

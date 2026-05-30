@@ -130,7 +130,7 @@ public final class SolidusIntegration {
                             addFuture.thenAccept(newKillerBalance -> {
                                 if (newKillerBalance != null && newKillerBalance >= 0) {
                                     // Success — notify both players on the server thread
-                                    victim.server.execute(() -> {
+                                    victim.getServer().execute(() -> {
                                         String formattedPenalty = String.format("%,.2f S$", penalty);
                                         victim.sendSystemMessage(
                                             net.minecraft.network.chat.Component.literal(

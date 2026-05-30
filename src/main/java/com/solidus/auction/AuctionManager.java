@@ -203,7 +203,7 @@ public class AuctionManager {
 
         // Full async chain — no .join(), no server thread blocking
         balanceManager.getBalance(player).thenAccept(balance -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 if (balance < listingFee) {
                     player.sendSystemMessage(TextUtil.error(
                         "Listing fee is " + CurrencyUtil.format(listingFee) +
@@ -213,7 +213,7 @@ public class AuctionManager {
 
                 // Deduct listing fee asynchronously
                 balanceManager.subtractBalance(player, listingFee).thenAccept(newBalance -> {
-                    player.server.execute(() -> {
+                    player.getServer().execute(() -> {
                         if (newBalance < 0) {
                             player.sendSystemMessage(TextUtil.error("Failed to deduct listing fee. Please try again."));
                             return;
@@ -232,10 +232,10 @@ public class AuctionManager {
                         // Save to database first, THEN remove item from player's hand
                         // This prevents item loss if the database save fails
                         saveListing(entry).thenAccept(success -> {
-                            player.server.execute(() -> {
+                            player.getServer().execute(() -> {
                                 if (success) {
                                     // Item saved successfully — now safe to remove from player
-                                    player.getInventory().setItem(player.getInventory().selected, ItemStack.EMPTY);
+                                    player.getInventory().setItem(player.getInventory().getSelectedSlot(), ItemStack.EMPTY);
 
                                     // Log transaction
                                     economyEngine.getTransactionLog().log(
@@ -335,7 +335,7 @@ public class AuctionManager {
         }, asyncExecutor).thenAccept(result -> {
             // Step 2: Back on the server thread — process the financial side
             // Balance reads are instant (in-memory cache), no cross-executor blocking
-            buyer.server.execute(() -> {
+            buyer.getServer().execute(() -> {
                 if (result instanceof String errorMsg) {
                     switch (errorMsg) {
                         case "SOLD_OUT" -> buyer.sendSystemMessage(
@@ -354,7 +354,7 @@ public class AuctionManager {
 
                 // Check if buyer can afford it — full async chain, no .join()
                 balanceManager.getBalance(buyer).thenAccept(buyerBalance -> {
-                    buyer.server.execute(() -> {
+                    buyer.getServer().execute(() -> {
                         if (buyerBalance < entry.price()) {
                             // Buyer can't afford — rollback the sale
                             SolidusMod.LOGGER.warn("Auction buyer {} cannot afford listing {}. Rolling back.",
@@ -366,7 +366,7 @@ public class AuctionManager {
 
                         // Deduct from buyer — async chain, no .join()
                         balanceManager.subtractBalance(buyer, entry.price()).thenAccept(newBuyerBalance -> {
-                            buyer.server.execute(() -> {
+                            buyer.getServer().execute(() -> {
                                 if (newBuyerBalance < 0) {
                                     // CRITICAL: Balance deduction failed after marking sold — rollback
                                     SolidusMod.LOGGER.error("CRITICAL: Balance deduction failed after marking listing {} as sold! Rolling back.",
@@ -416,7 +416,7 @@ public class AuctionManager {
                                     "Your auction item " + entry.quantity() + "x " + entry.materialName() +
                                         " was purchased by " + buyer.getName().getString() + " for " +
                                         CurrencyUtil.format(entry.price()),
-                                    buyer.server
+                                    buyer.getServer()
                                 );
 
                                 // Success notification
@@ -665,6 +665,8 @@ public class AuctionManager {
             MinecraftServer currentServer = this.server;
             if (currentServer != null) {
                 var registryAccess = currentServer.registryAccess();
+                // TODO: 26.1.x - Verify ItemStack.save(HolderLookup.Provider) still exists and returns CompoundTag.
+                //  The primer doesn't mention this being renamed, but ItemStackTemplate changes may affect serialization.
                 var tag = stack.save(registryAccess);
                 return tag.toString();
             }
@@ -679,10 +681,15 @@ public class AuctionManager {
         try {
             // Try to deserialize from NBT
             if (itemNbt != null && itemNbt.startsWith("{")) {
+                // TODO: 26.1.x - Verify TagParser.parseTag(String) still exists (may have been renamed to parse()).
+                //  The primer doesn't mention this change, but check at compile time.
                 var tag = (net.minecraft.nbt.CompoundTag) net.minecraft.nbt.TagParser.parseTag(itemNbt);
                 MinecraftServer currentServer = this.server;
                 if (currentServer != null) {
                     var registryAccess = currentServer.registryAccess();
+                    // TODO: 26.1.x - Verify ItemStack.parseOptional(HolderLookup.Provider, CompoundTag) still exists.
+                    //  May have been renamed to parse() or the return type may have changed.
+                    //  The primer mentions some ItemStack CODEC fields were removed, but not this method specifically.
                     var parsed = ItemStack.parseOptional(registryAccess, tag);
                     if (!parsed.isEmpty()) return parsed;
                 }
@@ -694,7 +701,7 @@ public class AuctionManager {
         // Fallback: create item from material name
         try {
             net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(materialName.toLowerCase()));
+                .get(new net.minecraft.resources.ResourceLocation(materialName.toLowerCase()));
             if (item == null) return ItemStack.EMPTY;
             return new ItemStack(item, quantity);
         } catch (Exception e) {
@@ -738,7 +745,7 @@ public class AuctionManager {
             }
             return expired;
         }, asyncExecutor).thenAccept(expired -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 if (expired.isEmpty()) {
                     player.sendSystemMessage(TextUtil.styled(
                         "You have no expired items to collect.", ChatFormatting.GRAY));
@@ -816,7 +823,7 @@ public class AuctionManager {
                 return "DB_ERROR";
             }
         }, asyncExecutor).thenAccept(result -> {
-            player.server.execute(() -> {
+            player.getServer().execute(() -> {
                 if (result instanceof String errorMsg) {
                     switch (errorMsg) {
                         case "NOT_FOUND" -> player.sendSystemMessage(

@@ -117,7 +117,8 @@ public class ShopScreenHandler extends AbstractContainerMenu {
      * as financial transactions or navigation events.
      */
     @Override
-    public void clicked(int slotIndex, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+    // TODO: 26.1.x - ClickType → ContainerInput; button param may be removed (absorbed into ContainerInput)
+    public void clicked(int slotIndex, int button, net.minecraft.world.inventory.ContainerInput containerInput, Player player) {
         // Allow normal interaction with the player's own inventory area
         // Slot indices >= 54 are in the player's inventory (added after the 54 container slots)
         if (slotIndex < 0 || slotIndex >= 54) {
@@ -131,7 +132,7 @@ public class ShopScreenHandler extends AbstractContainerMenu {
         }
 
         switch (guiSlot.type()) {
-            case SHOP_ITEM -> handleShopItemClick(guiSlot, button, clickType);
+            case SHOP_ITEM -> handleShopItemClick(guiSlot, button, containerInput);
             case SECTION_BUTTON -> handleSectionButtonClick(guiSlot);
             case NAVIGATION -> handleNavigationClick(guiSlot);
             case DISPLAY_ONLY, FILLER -> {
@@ -146,11 +147,12 @@ public class ShopScreenHandler extends AbstractContainerMenu {
     /**
      * Handles a click on a shop item - processes buy/sell transactions.
      */
-    private void handleShopItemClick(GuiSlot slot, int button, net.minecraft.world.inventory.ClickType clickType) {
+    private void handleShopItemClick(GuiSlot slot, int button, net.minecraft.world.inventory.ContainerInput containerInput) {
         String material = slot.actionKey();
         if (material == null) return;
 
-        boolean isShiftClick = clickType == net.minecraft.world.inventory.ClickType.QUICK_MOVE;
+        // TODO: 26.1.x - ContainerInput replaces ClickType. Verify QUICK_MOVE constant name.
+        boolean isShiftClick = containerInput == net.minecraft.world.inventory.ContainerInput.QUICK_MOVE;
         boolean isRightClick = button == 1;
 
         if (isShiftClick && isRightClick) {
@@ -176,6 +178,7 @@ public class ShopScreenHandler extends AbstractContainerMenu {
         if (sectionKey == null) return;
 
         // Close current screen and open the section
+        // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
         player.closeContainer();
         shopManager.openSection(player, sectionKey, 0);
     }
@@ -189,18 +192,22 @@ public class ShopScreenHandler extends AbstractContainerMenu {
 
         switch (action) {
             case ShopGUI.NAV_BACK -> {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
                 shopManager.openShop(player);
             }
             case ShopGUI.NAV_PREV -> {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
                 shopManager.openSection(player, currentSection, currentPage - 1);
             }
             case ShopGUI.NAV_NEXT -> {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
                 shopManager.openSection(player, currentSection, currentPage + 1);
             }
             case ShopGUI.NAV_CLOSE -> {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
             }
         }

@@ -95,7 +95,8 @@ public class AuctionScreenHandler extends AbstractContainerMenu {
     }
 
     @Override
-    public void clicked(int slotIndex, int button, net.minecraft.world.inventory.ClickType clickType, Player player) {
+    // TODO: 26.1.x - ClickType → ContainerInput; button param may be removed (absorbed into ContainerInput)
+    public void clicked(int slotIndex, int button, net.minecraft.world.inventory.ContainerInput containerInput, Player player) {
         // Allow normal interaction with the player's own inventory area
         if (slotIndex < 0 || slotIndex >= 54) {
             return; // Player inventory clicks - let vanilla handle
@@ -136,6 +137,7 @@ public class AuctionScreenHandler extends AbstractContainerMenu {
      * Handles the refresh button click.
      */
     private void handleRefresh() {
+        // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
         player.closeContainer();
         if (myItemsView) {
             AuctionGUI.openMyListings(player, auctionManager);
@@ -148,6 +150,7 @@ public class AuctionScreenHandler extends AbstractContainerMenu {
      * Handles the My Items button click.
      */
     private void handleMyItems() {
+        // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
         player.closeContainer();
         AuctionGUI.openMyListings(player, auctionManager);
     }
@@ -161,36 +164,38 @@ public class AuctionScreenHandler extends AbstractContainerMenu {
 
         switch (action) {
             case "PREV" -> {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
                 if (myItemsView) {
                     auctionManager.getListingsBySeller(player.getUUID()).thenAccept(listings -> {
-                        player.server.execute(() ->
+                        player.getServer().execute(() ->
                             AuctionGUI.buildAndOpenAuctionScreen(player, auctionManager, listings, currentPage - 1, true));
                     });
                 } else {
                     // Re-fetch active listings and open previous page
                     auctionManager.getActiveListings().thenAccept(listings -> {
-                        player.server.execute(() ->
+                        player.getServer().execute(() ->
                             AuctionGUI.buildAndOpenAuctionScreen(player, auctionManager, listings, currentPage - 1, false));
                     });
                 }
             }
             case "NEXT" -> {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
                 if (myItemsView) {
                     auctionManager.getListingsBySeller(player.getUUID()).thenAccept(listings -> {
-                        player.server.execute(() ->
+                        player.getServer().execute(() ->
                             AuctionGUI.buildAndOpenAuctionScreen(player, auctionManager, listings, currentPage + 1, true));
                     });
                 } else {
                     // Re-fetch active listings and open next page
                     auctionManager.getActiveListings().thenAccept(listings -> {
-                        player.server.execute(() ->
+                        player.getServer().execute(() ->
                             AuctionGUI.buildAndOpenAuctionScreen(player, auctionManager, listings, currentPage + 1, false));
                     });
                 }
             }
-            case "CLOSE" -> player.closeContainer();
+            case "CLOSE" -> player.closeContainer(); // TODO: 26.1.x - Verify closeContainer() not renamed
         }
     }
 

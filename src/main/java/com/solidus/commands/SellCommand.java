@@ -129,8 +129,8 @@ public class SellCommand {
         List<String> soldItems = new ArrayList<>();
 
         // Process regular inventory items
-        for (int i = 0; i < player.getInventory().items.size(); i++) {
-            ItemStack stack = player.getInventory().items.get(i);
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty()) continue;
 
             // Check if this is a shulker box
@@ -152,12 +152,12 @@ public class SellCommand {
                             // Sell the shulker box too if selling all
                             totalEarnings += shulkerShopItem.sellPrice();
                             totalItemsSold += 1;
-                            player.getInventory().items.set(i, ItemStack.EMPTY);
+                            player.getInventory().setItem(i, ItemStack.EMPTY);
                         }
                         // If not sellable, keep the empty shulker box
                     } else {
                         // Some items remain - update the shulker box in place
-                        player.getInventory().items.set(i, result.updatedShulkerBox);
+                        player.getInventory().setItem(i, result.updatedShulkerBox);
                     }
                 }
                 continue;
@@ -182,13 +182,13 @@ public class SellCommand {
             soldItems.add(stack.getCount() + "x " + material);
 
             // Remove the item from inventory
-            player.getInventory().items.set(i, ItemStack.EMPTY);
+            player.getInventory().setItem(i, ItemStack.EMPTY);
         }
 
         // Also check offhand and armor slots for /sell all
         if (targetMaterial == null) {
             // Check offhand
-            ItemStack offhand = player.getInventory().offhand.get(0);
+            ItemStack offhand = player.getOffhandItem();
             if (!offhand.isEmpty() && !SellScreenHandler.isShulkerBox(offhand)) {
                 String material = getMaterialName(offhand);
                 ShopManager.ShopItem shopItem = shopManager.findItem(material);
@@ -196,7 +196,7 @@ public class SellCommand {
                     double value = CurrencyUtil.round(shopItem.sellPrice() * offhand.getCount());
                     totalEarnings += value;
                     totalItemsSold += offhand.getCount();
-                    player.getInventory().offhand.set(0, ItemStack.EMPTY);
+                    player.getInventory().setItem(40, ItemStack.EMPTY);
                 }
             }
             // Note: We don't sell armor to prevent accidental sales

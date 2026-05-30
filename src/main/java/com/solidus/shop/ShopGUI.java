@@ -164,7 +164,7 @@ public final class ShopGUI {
         ItemStack icon;
         try {
             net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(section.icon().toLowerCase()));
+                .get(new net.minecraft.resources.ResourceLocation(section.icon().toLowerCase()));
             icon = new ItemStack(item);
         } catch (Exception e) {
             icon = new ItemStack(Items.CHEST);
@@ -191,7 +191,7 @@ public final class ShopGUI {
         ItemStack display;
         try {
             net.minecraft.world.item.Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM
-                .get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(shopItem.material().toLowerCase()));
+                .get(new net.minecraft.resources.ResourceLocation(shopItem.material().toLowerCase()));
             display = new ItemStack(item);
         } catch (Exception e) {
             display = new ItemStack(Items.PAPER);

@@ -17,7 +17,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.BlockItem;
@@ -137,6 +137,7 @@ public class SellScreenHandler extends AbstractContainerMenu {
         if (guiSlot.type() == GuiSlot.Type.NAVIGATION) {
             String action = guiSlot.actionKey();
             if (SellGUI.NAV_CLOSE.equals(action)) {
+                // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                 player.closeContainer();
             }
         }
@@ -161,7 +162,8 @@ public class SellScreenHandler extends AbstractContainerMenu {
      * - Click outside (slot -999): Drop cursor item
      */
     @Override
-    public void clicked(int slotIndex, int button, ClickType clickType, Player player) {
+    // TODO: 26.1.x - ClickType → ContainerInput; button param may be removed (absorbed into ContainerInput)
+    public void clicked(int slotIndex, int button, ContainerInput containerInput, Player player) {
         // Handle clicks outside the container (drop cursor item)
         if (slotIndex == -999) {
             ItemStack cursor = getCarried();
@@ -181,6 +183,7 @@ public class SellScreenHandler extends AbstractContainerMenu {
             if (guiSlot != null && guiSlot.type() == GuiSlot.Type.NAVIGATION) {
                 String action = guiSlot.actionKey();
                 if (SellGUI.NAV_CLOSE.equals(action)) {
+                    // TODO: 26.1.x - Verify player.closeContainer() still exists (not renamed to closeMenu)
                     player.closeContainer();
                 }
             }
@@ -191,14 +194,14 @@ public class SellScreenHandler extends AbstractContainerMenu {
 
         // Handle input area slots (9-53)
         if (slotIndex >= 9 && slotIndex < 54) {
-            handleInputSlotClick(slotIndex, button, clickType);
+            handleInputSlotClick(slotIndex, button, containerInput);
             syncCursorToClient();
             return;
         }
 
         // Handle player inventory slots (54+)
         if (slotIndex >= 54) {
-            handleInventorySlotClick(slotIndex, button, clickType);
+            handleInventorySlotClick(slotIndex, button, containerInput);
             syncCursorToClient();
             return;
         }
@@ -207,12 +210,16 @@ public class SellScreenHandler extends AbstractContainerMenu {
     /**
      * Handles clicks on input area slots (9-53).
      */
-    private void handleInputSlotClick(int slotIndex, int button, ClickType clickType) {
+    private void handleInputSlotClick(int slotIndex, int button, ContainerInput containerInput) {
         Slot slot = this.slots.get(slotIndex);
         ItemStack slotStack = slot.getItem();
         ItemStack cursor = getCarried();
 
-        if (clickType == ClickType.QUICK_MOVE) {
+        // TODO: 26.1.x - ContainerInput replaces ClickType. The old ClickType.QUICK_MOVE
+        //  likely corresponds to ContainerInput.QUICK_MOVE or a similar shift-click variant.
+        //  The old ClickType.PICKUP + button=0 (left) / button=1 (right) likely maps to
+        //  ContainerInput.PICKUP (or LEFT_CLICK/RIGHT_CLICK). Verify at compile time.
+        if (containerInput == ContainerInput.QUICK_MOVE) {
             // Shift-click: move item from input area back to player inventory
             if (!slotStack.isEmpty()) {
                 ItemStack toMove = slotStack.copy();
@@ -222,7 +229,8 @@ public class SellScreenHandler extends AbstractContainerMenu {
             return;
         }
 
-        if (clickType == ClickType.PICKUP) {
+        // TODO: 26.1.x - ClickType.PICKUP → ContainerInput.PICKUP (verify at compile time)
+        if (containerInput == ContainerInput.PICKUP) {
             if (button == 0) {
                 // Left click
                 if (cursor.isEmpty()) {
@@ -289,12 +297,13 @@ public class SellScreenHandler extends AbstractContainerMenu {
     /**
      * Handles clicks on player inventory slots (54+).
      */
-    private void handleInventorySlotClick(int slotIndex, int button, ClickType clickType) {
+    private void handleInventorySlotClick(int slotIndex, int button, ContainerInput containerInput) {
         Slot slot = this.slots.get(slotIndex);
         ItemStack slotStack = slot.getItem();
         ItemStack cursor = getCarried();
 
-        if (clickType == ClickType.QUICK_MOVE) {
+        // TODO: 26.1.x - ContainerInput replaces ClickType. Verify QUICK_MOVE constant name.
+        if (containerInput == ContainerInput.QUICK_MOVE) {
             // Shift-click: move item from player inventory to input area
             if (!slotStack.isEmpty()) {
                 ItemStack remaining = moveItemToInputArea(slotStack);
@@ -307,7 +316,8 @@ public class SellScreenHandler extends AbstractContainerMenu {
             return;
         }
 
-        if (clickType == ClickType.PICKUP) {
+        // TODO: 26.1.x - ClickType.PICKUP → ContainerInput.PICKUP (verify at compile time)
+        if (containerInput == ContainerInput.PICKUP) {
             if (button == 0) {
                 // Left click
                 if (cursor.isEmpty()) {
@@ -420,7 +430,7 @@ public class SellScreenHandler extends AbstractContainerMenu {
      *
      * This is CRITICAL for the sell GUI because the PacketHandler intercepts
      * and cancels all click packets for Solidus GUIs. After cancellation,
-     * sendContentUpdates() syncs slot contents but NOT the cursor item.
+     * broadcastChanges() syncs slot contents but NOT the cursor item.
      * Without explicit cursor syncing, the client would show a "ghost cursor"
      * from its optimistic click processing that doesn't match the server state.
      *
@@ -576,7 +586,7 @@ public class SellScreenHandler extends AbstractContainerMenu {
             BalanceManager balanceManager = economyEngine.getBalanceManager();
 
             balanceManager.addBalance(player, totalEarnings).thenAccept(newBalance -> {
-                player.server.execute(() -> {
+                player.getServer().execute(() -> {
                     if (newBalance < 0) {
                         SolidusMod.LOGGER.error("CRITICAL: Sell GUI balance add failed for {}! Items sold but no money received. Amount: {}",
                             player.getName().getString(), totalEarnings);

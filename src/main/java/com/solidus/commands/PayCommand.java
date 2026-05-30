@@ -115,7 +115,7 @@ public class PayCommand {
         // Perform atomic transfer
         balanceManager.transfer(sender, receiver, amount).thenAccept(result -> {
             // Schedule notification on the server thread
-            sender.server.execute(() -> {
+            sender.getServer().execute(() -> {
                 if (result.success()) {
                     // Notify sender
                     sender.sendSystemMessage(
@@ -206,7 +206,7 @@ public class PayCommand {
 
         // Offline transfer: deduct from sender (online), add to receiver (offline)
         balanceManager.subtractBalance(sender, amount).thenAccept(newSenderBalance -> {
-            sender.server.execute(() -> {
+            sender.getServer().execute(() -> {
                 if (newSenderBalance < 0) {
                     sender.sendSystemMessage(TextUtil.error("Insufficient funds!"));
                     return;
@@ -214,7 +214,7 @@ public class PayCommand {
 
                 // Add to offline receiver's balance
                 balanceManager.addBalance(receiverUuid, targetName, amount).thenAccept(newReceiverBalance -> {
-                    sender.server.execute(() -> {
+                    sender.getServer().execute(() -> {
                         if (newReceiverBalance < 0) {
                             // CRITICAL: Addition failed after deduction — refund sender
                             SolidusMod.LOGGER.error(
@@ -238,7 +238,7 @@ public class PayCommand {
                         transactionLog.queueNotification(receiverUuid,
                             "You received " + CurrencyUtil.format(amount) + " from " +
                                 sender.getName().getString() + " while you were offline.",
-                            sender.server);
+                            sender.getServer());
 
                         // Log transactions
                         transactionLog.log(TransactionLog.Type.PAY_SEND,

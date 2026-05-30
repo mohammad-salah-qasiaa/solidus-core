@@ -293,7 +293,7 @@ public class TransactionLog {
             return messages;
         }, asyncExecutor).thenAccept(messages -> {
             if (!messages.isEmpty()) {
-                player.server.execute(() -> {
+                player.getServer().execute(() -> {
                     for (String msg : messages) {
                         player.sendSystemMessage(com.solidus.util.TextUtil.styled(
                             "[Solidus] " + msg, net.minecraft.ChatFormatting.AQUA));
